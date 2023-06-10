@@ -1,68 +1,49 @@
-from subprocess import Popen, PIPE
+from .adb_utils import Adb
+from .script import script_dict
+from PyQt6.QtCore import QThread, pyqtSignal
 
+class ScriptParse(QThread):
+    logger_sign = pyqtSignal(int)
+    is_run = pyqtSignal(bool)
+    wait = pyqtSignal()
 
-class Adb:
-    adb_path = "./platform-tools/adb"
+    def __init__(self):
+        super().__init__()
+        self.script = script_dict
 
-    def __init__(self, serial=None):
-        pass
+    def _parse(self, scripts: dict, *args, reset=False) -> tuple:
+        print(scripts)
+        return ()
 
-    @property
-    def device_list(self) -> list:
-        cmd = [self.adb_path, 'devices', '-l']
-        p = Popen(cmd, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
-        devices = []
-        for line in stdout.splitlines():
-            line = line.decode('utf-8')
-            if line.find("product") != -1:
-                devices.append((line.split()[0].strip(), line.split()[1].strip()))
+    def pause(self):
+        """
+        暂停线程
+        :return:
+        """
+        self.wait()
 
-        return devices
+    def resume(self):
+        """
+        恢复线程
+        :return:
+        """
+        self.start()
 
-    def command(self, *args):
-        cmd = [self.adb_path]
-        cmd.extend(args)
-        return Popen(cmd, stdout=PIPE, stderr=PIPE)
+    def stop(self):
+        """
+        停止线程
+        :return:
+        """
+        self.quit()
 
-    def shell(self, *args):
-        cmd = [self.adb_path]
-        cmd.extend(['shell'])
-        cmd.extend(args)
-        return Popen(cmd, stdout=PIPE, stderr=PIPE)
-
-    def getprop(self, prop):
-        p = self.shell('getprop', prop)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
-        return stdout.strip()
-
-    def setprop(self, prop, value):
-        p = self.shell('setprop', prop, value)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
-        return stdout.strip()
-
-    def push(self, src, dst):
-        p = self.command('push', src, dst)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
-
-    def kill_server(self):
-        p = self.command('kill-server')
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
-
-    def __del__(self):
-        self.kill_server()
-
-
-if __name__ == '__main__':
-    adb = Adb()
-    print(adb.device_list)
+    def run(self, *args, reset=False):
+        lst = Adb.get_device_list()
+        print("设备列表: " + str(lst))
+        if len(lst) == 0:
+            self.is_run.emit(False)
+            self.logger_sign.emit(0)
+        else:
+            # self.wait.emit(self.currentThread())
+            self.pause()  # 暂停线程
+            self._parse(self.script, reset=reset)
+        self.stop()

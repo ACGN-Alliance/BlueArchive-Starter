@@ -105,6 +105,13 @@ class Ui_MainWindow(object):
         self.PushButton_3 = PushButton(parent=self.centralwidget)
         self.PushButton_3.setGeometry(QtCore.QRect(140, 220, 106, 34))
         self.PushButton_3.setObjectName("PushButton_3")
+        self.label_2 = QtWidgets.QLabel(parent=self.centralwidget)
+        self.label_2.setGeometry(QtCore.QRect(220, 100, 100, 34))
+        font = QtGui.QFont()
+        font.setPointSize(13)
+        self.label_2.setFont(font)
+        self.label_2.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.label_2.setObjectName("label_2")
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
@@ -117,4 +124,5 @@ class Ui_MainWindow(object):
         self.PushButton.setText(_translate("MainWindow", "连接"))
         self.PushButton_2.setText(_translate("MainWindow", "开始"))
         self.PushButton_3.setText(_translate("MainWindow", "暂停"))
+        self.label_2.setText(_translate("MainWindow", "未连接"))
 from qfluentwidgets import ComboBox, ListView, PushButton
