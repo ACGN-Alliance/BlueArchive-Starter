@@ -1,22 +1,17 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QFileDialog, QStyle
+from PyQt6.QtWidgets import QApplication, QMainWindow
 from UI.newui import Ui_MainWindow
+from PyQt6.QtCore import QThreadPool
 import sys
-from enum import Enum
-from qfluentwidgets import StyleSheetBase, Theme, isDarkTheme, qconfig
 
-
-class StyleSheet(StyleSheetBase, Enum):
-    """ Style sheet  """
-
-    MAIN_WINDOW = "main_window"
-
-    def path(self, theme=Theme.AUTO):
-        theme = qconfig.theme if theme == Theme.AUTO else theme
-        return f"app/resource/qss/{theme.value.lower()}/{self.value}.qss"
+connect_mode = {
+    "USB调试": "USB",
+    "蓝叠模拟器(开发中)": "BlueStacks"
+}
 
 class App(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
+        self.pool = None
         self.setupUi(self)
         self.setFixedSize(self.width(), self.height())
         self.set_components()
@@ -24,11 +19,15 @@ class App(QMainWindow, Ui_MainWindow):
 
     def set_components(self):
         self.ComboBox.addItems(["USB调试", "蓝叠模拟器(开发中)"])
-
         self.ComboBox.setCurrentText("USB调试")
 
     def set_trigger(self):
-        pass
+        self.PushButton.clicked.connect(self.connect_adb)
+
+    def connect_adb(self):
+        self.pool = QThreadPool()
+        self.thread = self.pool.thread()
+        self.thread.setObjectName("ADB")
 
 
 if __name__ == '__main__':
