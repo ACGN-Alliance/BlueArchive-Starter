@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>480</width>
+    <height>640</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>碧蓝档案初始号工具</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>35</x>
+      <y>35</y>
+      <width>67</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>连接模式</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="ComboBox" name="ComboBox">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>35</y>
+      <width>300</width>
+      <height>34</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">ComboBox {
+    border: 1px solid rgba(0, 0, 0, 0.073);
+    border-radius: 5px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.183);
+    padding: 5px 31px 6px 11px;
+    font: 14px 'Segoe UI', 'Microsoft YaHei';
+    color: black;
+    background-color: rgba(255, 255, 255, 0.7);
+    text-align: left;
+}
+
+ComboBox:hover {
+    background-color: rgba(249, 249, 249, 0.5);
+}
+
+ComboBox:pressed {
+    background-color: rgba(249, 249, 249, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.073);
+    color: rgba(0, 0, 0, 0.63);
+}
+
+ComboBox:disabled {
+    color: rgba(0, 0, 0, 0.36);
+    background: rgba(249, 249, 249, 0.3);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+
+ComboBoxMenu&gt;MenuActionListWidget {
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 9px;
+    background-color: rgb(249, 249, 249);
+    outline: none;
+    font: 14px 'Segoe UI', 'Microsoft YaHei';
+}
+
+ComboBoxMenu&gt;MenuActionListWidget::item {
+    margin-top: 4px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 5px;
+    border: none;
+	color: rgb(0, 0, 0);
+}
+
+ComboBoxMenu&gt;MenuActionListWidget::item:disabled {
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: 5px;
+    border: none;
+    color: black;
+}
+
+ComboBoxMenu&gt;MenuActionListWidget::item:hover {
+    background-color: rgba(0, 0, 0, 9);
+}
+
+ComboBoxMenu&gt;MenuActionListWidget::item:selected {
+    background-color: rgba(0, 0, 0, 7);
+    color: black;
+}
+
+ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
+    background-color: rgba(0, 0, 0, 0.06);
+    color: rgba(0, 0, 0, 0.7);
+}</string>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="PushButton" name="PushButton">
+    <property name="geometry">
+     <rect>
+      <x>330</x>
+      <y>100</y>
+      <width>106</width>
+      <height>34</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>连接</string>
+    </property>
+   </widget>
+   <widget class="ListView" name="ListView">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>280</y>
+      <width>461</width>
+      <height>351</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="PushButton" name="PushButton_2">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>220</y>
+      <width>106</width>
+      <height>34</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>开始</string>
+    </property>
+   </widget>
+   <widget class="PushButton" name="PushButton_3">
+    <property name="geometry">
+     <rect>
+      <x>140</x>
+      <y>220</y>
+      <width>106</width>
+      <height>34</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>暂停</string>
+    </property>
+   </widget>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ComboBox</class>
+   <extends>QPushButton</extends>
+   <header>qfluentwidgets</header>
+  </customwidget>
+  <customwidget>
+   <class>PushButton</class>
+   <extends>QPushButton</extends>
+   <header>qfluentwidgets</header>
+  </customwidget>
+  <customwidget>
+   <class>ListView</class>
+   <extends>QListView</extends>
+   <header>qfluentwidgets</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
