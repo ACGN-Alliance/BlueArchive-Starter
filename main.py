@@ -1,4 +1,4 @@
-import os
+import time
 
 from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.QtCore import QThreadPool, QObject, pyqtSignal, QThread
@@ -34,10 +34,46 @@ class App(QMainWindow, Ui_MainWindow):
     def set_trigger(self):
         self.PushButton.clicked.connect(self.connect_adb)
 
-    def connect_adb(self):
-        def enable_btn(status: bool):
-            self.PushButton.setEnabled(not status)
+    class ConnectListener(QThread):
+        """
+        adb连接监听
+        """
+        disconnect = pyqtSignal(bool)
 
+        def __init__(self):
+            super().__init__()
+
+        def __del__(self):
+            self.wait()
+
+        def run(self):
+            while True:
+                time.sleep(3)
+                if not sp.device_on():
+                    self.disconnect.emit(True)
+                    break
+            self.quit()
+
+    def enable_btn(self, status: bool):
+        """
+        恢复按钮
+        :param status:
+        :return:
+        """
+        if not status:
+            self.sp.quit()
+            self.PushButton_2.setEnabled(True)
+            self.PushButton_2.clicked.disconnect()
+            self.PushButton_2.clicked.connect(self.connect_adb)
+            self.PushButton_3.setEnabled(False)
+
+    def connect_adb(self):
+        """
+        连接adb
+        :return:
+        """
+
+        self.ComboBox.setEnabled(False)
         mode = connect_mode[self.ComboBox.currentText()]
         self.PushButton.setEnabled(False)
 
@@ -45,11 +81,12 @@ class App(QMainWindow, Ui_MainWindow):
 
         if mode == "USB":
             self.sp = sp()
-            self.sp.is_run.connect(enable_btn)
+            self.sp.is_run.connect(self.enable_btn)
             self.sp.logger_sign.connect(self.test_logger)  # 日志输出
             self.sp.wait.connect(self.enableStart)
-            self.sp.setObjectName("adb")
             self.sp.start()
+            self.listener = self.ConnectListener()
+            self.listener.disconnect.connect(self.enable_btn)
         else:
             self.PushButton.setEnabled(True)
             self.test_logger(-1)
@@ -58,11 +95,14 @@ class App(QMainWindow, Ui_MainWindow):
         print("返回值：", value)
 
     def enableStart(self):
-        # TODO 实时侦测ADB连接状态
+        def start():
+            self.PushButton_2.setEnabled(False)
+            self.PushButton_3.setEnabled(True)
+            self.sp.resume()
+
         self.PushButton_2.setEnabled(True)
-        self.PushButton_2.connect(self.sp.resume)
+        self.PushButton_2.clicked.connect(start)
         self.label_2.setText("已连接")
-        self.sp.pause()
 
 
 if __name__ == '__main__':

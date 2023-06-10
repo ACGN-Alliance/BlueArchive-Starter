@@ -8,6 +8,10 @@ class Adb:
         pass
 
     @classmethod
+    def have_device(cls) -> bool:
+        return len(cls.get_device_list()) != 0
+
+    @classmethod
     def get_device_list(cls) -> list:
         cmd = [cls.adb_path, 'devices', '-l']
         p = Popen(cmd, stdout=PIPE, stderr=PIPE)
