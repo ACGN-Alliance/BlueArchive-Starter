@@ -1,5 +1,7 @@
 from .adb_utils import Adb
 from .script import script_dict, Script
+from log import LoggerDisplay
+
 from PyQt6.QtCore import QThread, pyqtSignal
 
 

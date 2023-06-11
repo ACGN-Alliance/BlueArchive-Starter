@@ -1,5 +1,5 @@
 import time
-from typing import Any, Optional
+from typing import Optional
 
 from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.QtCore import QThreadPool, pyqtSignal, QThread, pyqtSlot
@@ -7,7 +7,9 @@ import sys
 
 from UI.newui import Ui_MainWindow
 from adb import ScriptParse as sp
+from adb.adb_utils import Adb
 from adb.script import script
+from log import LoggerDisplay
 
 connect_mode = {
     "USB调试": "USB",
@@ -54,11 +56,17 @@ class App(QMainWindow, Ui_MainWindow):
         self.ConnectionTypeComboBox.setCurrentText("USB调试")
         self.StartBtn.setEnabled(False)
         self.PauseBtn.setEnabled(False)
+        self.DisConnectBtn.setEnabled(False)
+        self.PlainTextEdit.setReadOnly(True)
+        self.logger = LoggerDisplay(self.PlainTextEdit)
+        self.logger.reset()
+        self.logger.info("欢迎使用碧蓝档案初始号工具~作者: MRSlouzk, 群号: 769521861")
 
         # signal connect
         self.ConnectBtn.clicked.connect(self.connect_adb)
         self.StartBtn.clicked.connect(self.startBtnClickedHandler)
         self.PauseBtn.clicked.connect(self.pauseBtnClickedHandler)
+        self.DisConnectBtn.clicked.connect(self.disconnectBtnClickedHandler)
 
     @pyqtSlot()
     def spPausedHandler(self):
@@ -69,11 +77,16 @@ class App(QMainWindow, Ui_MainWindow):
         if self.sp is not None and not self.sp.PSW.FINISHED:
             self.StartBtn.setEnabled(True)
             self.PauseBtn.setEnabled(False)
+            self.DisConnectBtn.setEnabled(True)
             self.ConnectBtn.setEnabled(False)
+            self.logger.info("连接成功~点击开始按钮开始执行脚本")
         else:
             self.StartBtn.setEnabled(False)
             self.PauseBtn.setEnabled(False)
+            self.DisConnectBtn.setEnabled(False)
             self.ConnectBtn.setEnabled(True)
+            self.ConnectionTypeComboBox.setEnabled(True)
+            self.logger.warning("连接失效~请重新连接")
 
     @pyqtSlot()
     def spResumedHandler(self):
@@ -85,10 +98,14 @@ class App(QMainWindow, Ui_MainWindow):
             self.StartBtn.setEnabled(False)
             self.PauseBtn.setEnabled(True)
             self.ConnectBtn.setEnabled(False)
+            self.logger.info("正在运行~点击暂停按钮暂停脚本")
         else:
             self.StartBtn.setEnabled(False)
             self.PauseBtn.setEnabled(False)
+            self.DisConnectBtn.setEnabled(False)
             self.ConnectBtn.setEnabled(True)
+            self.ConnectionTypeComboBox.setEnabled(True)
+            self.logger.warning("连接失效~请重新连接")
 
     @pyqtSlot()
     def listenerDisconnectedHandler(self):
@@ -96,11 +113,12 @@ class App(QMainWindow, Ui_MainWindow):
         连接断开
         :return:
         """
+        self.DisConnectBtn.setEnabled(False)
         self.ConnectBtn.setEnabled(True)
         self.ConnectionTypeComboBox.setEnabled(True)
         self.StartBtn.setEnabled(False)
         self.PauseBtn.setEnabled(False)
-        self.test_logger(-1)
+        self.logger.error("连接异常断开~请重新连接")
 
     @pyqtSlot()
     def startBtnClickedHandler(self):
@@ -115,7 +133,7 @@ class App(QMainWindow, Ui_MainWindow):
             self.PauseBtn.setEnabled(True)
             self.ConnectBtn.setEnabled(False)
             self.label_2.setText("正在运行")
-            print("正在运行")
+            self.logger.info("开始运行脚本~点击暂停按钮暂停脚本")
 
     @pyqtSlot()
     def pauseBtnClickedHandler(self):
@@ -130,22 +148,38 @@ class App(QMainWindow, Ui_MainWindow):
             self.PauseBtn.setEnabled(False)
             self.ConnectBtn.setEnabled(False)
             self.label_2.setText("执行暂停")
-            print("执行暂停")
+            self.logger.info("脚本运行已暂停, 点击开始按钮继续运行脚本")
+
+    @pyqtSlot()
+    def disconnectBtnClickedHandler(self):
+        """
+        断开连接
+        :return:
+        """
+        if self.sp is not None:
+            self.sp.Pause()
+
+            self.StartBtn.setEnabled(False)
+            self.PauseBtn.setEnabled(False)
+            self.DisConnectBtn.setEnabled(False)
+            self.ConnectBtn.setEnabled(True)
+            self.ConnectionTypeComboBox.setEnabled(True)
+            self.label_2.setText("未连接")
+            self.logger.info("连接已断开~请重新连接")
 
     @pyqtSlot()
     def spFinishedHandler(self):
-        self.ConnectBtn.setEnabled(True)
-        self.ConnectionTypeComboBox.setEnabled(True)
-        self.StartBtn.setEnabled(False)
+        self.StartBtn.setEnabled(True)  # 结束运行后可以重新开始
         self.PauseBtn.setEnabled(False)
-        self.label_2.setText("执行完毕")
+        self.label_2.setText("已连接")
+        self.logger.info("脚本运行结束~")
 
     @pyqtSlot(int)
     def spInstructionExecutedHandler(self, threadID: int):
         # fetch thread object through threadID
         # ...
 
-        print("thread:", threadID, "executed an instruction")
+        self.logger.info(f"线程: {threadID} 正在执行操作")
         self.label_2.setText("正在运行")
 
     @pyqtSlot()
@@ -158,7 +192,15 @@ class App(QMainWindow, Ui_MainWindow):
         self.ConnectBtn.setEnabled(False)
         self.ConnectionTypeComboBox.setEnabled(False)
 
+        if not Adb.have_device():
+            self.ConnectBtn.setEnabled(True)
+            self.ConnectionTypeComboBox.setEnabled(True)
+            self.label_2.setText("未连接")
+            self.logger.error("连接失败, 请检查设备是否存在")
+            return
+
         if (mode := connect_mode[self.ConnectionTypeComboBox.currentText()]) == "USB":
+            self.logger.info(f"连接成功~选择的模式是USB")
             # init script parser
             self.sp = sp(script=script)
 
@@ -169,6 +211,7 @@ class App(QMainWindow, Ui_MainWindow):
             self.sp.paused.connect(self.spPausedHandler)
             self.sp.finished.connect(self.spFinishedHandler)
             self.sp.started.connect(lambda: self.PauseBtn.setEnabled(True))
+            self.sp.instructionExecuted.connect(self.spInstructionExecutedHandler)
 
             #   start script parser
             self.sp.start()
@@ -183,11 +226,8 @@ class App(QMainWindow, Ui_MainWindow):
         else:
             self.ConnectBtn.setEnabled(True)
             self.ConnectionTypeComboBox.setEnabled(True)
-            self.test_logger(-1)
-
-    @pyqtSlot(int)
-    def test_logger(self, value: int):
-        print("返回值：", value)
+            self.label_2.setText("未实现")
+            self.logger.warning("该功能尚在开发中, 敬请期待")
 
 
 if __name__ == '__main__':

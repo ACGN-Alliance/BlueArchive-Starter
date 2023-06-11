@@ -1,8 +1,12 @@
 from subprocess import Popen, PIPE
+import platform as pf
 
 
 class Adb:
-    adb_path = "./platform-tools/adb.exe"
+    if pf.system() == 'Windows':
+        adb_path = "./platform-tools/adb.exe"
+    else:
+        adb_path = "./platform-tools/adb"
 
     def __init__(self, serial=None):
         pass
@@ -65,8 +69,3 @@ class Adb:
 
     def __del__(self):
         self.kill_server()
-
-
-if __name__ == '__main__':
-    adb = Adb()
-    print(adb.get_device_list())
