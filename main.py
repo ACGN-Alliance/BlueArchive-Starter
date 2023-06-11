@@ -1,7 +1,8 @@
 import time
+from typing import Any
 
 from PyQt6.QtWidgets import QApplication, QMainWindow
-from PyQt6.QtCore import QThreadPool, QObject, pyqtSignal, QThread
+from PyQt6.QtCore import QThreadPool, QObject, pyqtSignal, QThread, pyqtSlot
 import sys
 
 from UI.newui import Ui_MainWindow
@@ -13,6 +14,27 @@ connect_mode = {
 }
 
 
+class ConnectListener(QThread):
+    """
+    adb连接监听
+    """
+    disconnect = pyqtSignal(bool)
+
+    def __init__(self):
+        super().__init__()
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        while True:
+            time.sleep(3)
+            if not sp.device_on():
+                self.disconnect.emit(True)
+                break
+        self.quit()
+
+
 class App(QMainWindow, Ui_MainWindow):
     sign = pyqtSignal(bool)
 
@@ -21,40 +43,18 @@ class App(QMainWindow, Ui_MainWindow):
         self.pool = QThreadPool()  # TODO 多线程开发
         self.setupUi(self)
         self.setFixedSize(self.width(), self.height())
-        self.set_components()
-        self.set_trigger()
 
-    def set_components(self):
-        self.ComboBox.addItems([mode for mode in connect_mode.keys()])
-        self.ComboBox.setCurrentText("USB调试")
+        # widget init
+        self.ConnectionTypeComboBox.addItems([mode for mode in connect_mode.keys()])
+        self.ConnectionTypeComboBox.setCurrentText("USB调试")
+        self.StartBtn.setEnabled(False)
+        self.PauseBtn.setEnabled(False)
 
-        self.PushButton_2.setEnabled(False)
-        self.PushButton_3.setEnabled(False)
+        # signal connect
+        self.ConnectBtn.clicked.connect(self.connect_adb)
 
-    def set_trigger(self):
-        self.PushButton.clicked.connect(self.connect_adb)
-
-    class ConnectListener(QThread):
-        """
-        adb连接监听
-        """
-        disconnect = pyqtSignal(bool)
-
-        def __init__(self):
-            super().__init__()
-
-        def __del__(self):
-            self.wait()
-
-        def run(self):
-            while True:
-                time.sleep(3)
-                if not sp.device_on():
-                    self.disconnect.emit(True)
-                    break
-            self.quit()
-
-    def enable_btn(self, status: bool):
+    @pyqtSlot(bool)
+    def enableStartBtn(self, status: bool):
         """
         恢复按钮
         :param status:
@@ -62,47 +62,56 @@ class App(QMainWindow, Ui_MainWindow):
         """
         if not status:
             self.sp.quit()
-            self.PushButton_2.setEnabled(True)
-            self.PushButton_2.clicked.disconnect()
-            self.PushButton_2.clicked.connect(self.connect_adb)
-            self.PushButton_3.setEnabled(False)
+            self.StartBtn.setEnabled(True)
+            self.StartBtn.clicked.disconnect()
+            self.StartBtn.clicked.connect(self.connect_adb)
+            self.PauseBtn.setEnabled(False)
 
+    @pyqtSlot()
     def connect_adb(self):
         """
         连接adb
         :return:
         """
 
-        self.ComboBox.setEnabled(False)
-        mode = connect_mode[self.ComboBox.currentText()]
-        self.PushButton.setEnabled(False)
+        self.ConnectBtn.setEnabled(False)
+        self.ConnectionTypeComboBox.setEnabled(False)
 
-        # print("当前目录: " + os.getcwd())
-
-        if mode == "USB":
+        if (mode := connect_mode[self.ConnectionTypeComboBox.currentText()]) == "USB":
+            # init script parser
             self.sp = sp()
-            self.sp.is_run.connect(self.enable_btn)
+            #   connect script parser signal
+            self.sp.is_run.connect(self.enableStartBtn)
             self.sp.logger_sign.connect(self.test_logger)  # 日志输出
-            self.sp.wait.connect(self.enableStart)
+            self.sp.wait.connect(self.readyForStart)
+            #   start script parser
             self.sp.start()
-            self.listener = self.ConnectListener()
-            self.listener.disconnect.connect(self.enable_btn)
+
+            # init connect listener
+            self.listener = ConnectListener()
+            #   connect connect listener signal
+            self.listener.disconnect.connect(self.enableStartBtn)
+            #   start connect listener
+            self.listener.start()
         else:
-            self.PushButton.setEnabled(True)
+            self.ConnectBtn.setEnabled(True)
             self.test_logger(-1)
 
-    def test_logger(self, value):
+    @pyqtSlot(int)
+    def test_logger(self, value: int):
         print("返回值：", value)
 
-    def enableStart(self):
-        def start():
-            self.PushButton_2.setEnabled(False)
-            self.PushButton_3.setEnabled(True)
-            self.sp.resume()
+    @pyqtSlot()
+    def readyForStart(self):
 
-        self.PushButton_2.setEnabled(True)
-        self.PushButton_2.clicked.connect(start)
+        self.StartBtn.setEnabled(True)
+        self.StartBtn.clicked.connect(self.start)
         self.label_2.setText("已连接")
+
+    def start(self):
+        self.StartBtn.setEnabled(False)
+        self.PauseBtn.setEnabled(True)
+        self.sp.resume()
 
 
 if __name__ == '__main__':

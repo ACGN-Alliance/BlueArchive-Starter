@@ -14,7 +14,7 @@
    <string>碧蓝档案初始号工具</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLabel" name="label">
+   <widget class="QLabel" name="ConnectionTypeLabel">
     <property name="geometry">
      <rect>
       <x>35</x>
@@ -35,7 +35,7 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="ComboBox" name="ComboBox">
+   <widget class="ComboBox" name="ConnectionTypeComboBox">
     <property name="geometry">
      <rect>
       <x>140</x>
@@ -117,7 +117,7 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
      <string/>
     </property>
    </widget>
-   <widget class="PushButton" name="PushButton">
+   <widget class="PushButton" name="ConnectBtn">
     <property name="geometry">
      <rect>
       <x>330</x>
@@ -140,7 +140,7 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
      </rect>
     </property>
    </widget>
-   <widget class="PushButton" name="PushButton_2">
+   <widget class="PushButton" name="StartBtn">
     <property name="geometry">
      <rect>
       <x>20</x>
@@ -153,7 +153,7 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
      <string>开始</string>
     </property>
    </widget>
-   <widget class="PushButton" name="PushButton_3">
+   <widget class="PushButton" name="PauseBtn">
     <property name="geometry">
      <rect>
       <x>140</x>

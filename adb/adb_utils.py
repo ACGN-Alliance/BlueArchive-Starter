@@ -2,7 +2,7 @@ from subprocess import Popen, PIPE
 
 
 class Adb:
-    adb_path = "./platform-tools/adb"
+    adb_path = "./platform-tools/adb.exe"
 
     def __init__(self, serial=None):
         pass
@@ -69,4 +69,4 @@ class Adb:
 
 if __name__ == '__main__':
     adb = Adb()
-    print(adb.device_list)
+    print(adb.get_device_list())
