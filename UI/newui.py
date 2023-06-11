@@ -22,9 +22,9 @@ class Ui_MainWindow(object):
         self.label.setFont(font)
         self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.label.setObjectName("label")
-        self.ComboBox = ComboBox(parent=self.centralwidget)
-        self.ComboBox.setGeometry(QtCore.QRect(140, 35, 300, 34))
-        self.ComboBox.setStyleSheet("ComboBox {\n"
+        self.ConnectionTypeComboBox = ComboBox(parent=self.centralwidget)
+        self.ConnectionTypeComboBox.setGeometry(QtCore.QRect(140, 35, 300, 34))
+        self.ConnectionTypeComboBox.setStyleSheet("ComboBox {\n"
 "    border: 1px solid rgba(0, 0, 0, 0.073);\n"
 "    border-radius: 5px;\n"
 "    border-bottom: 1px solid rgba(0, 0, 0, 0.183);\n"
@@ -91,20 +91,20 @@ class Ui_MainWindow(object):
 "    background-color: rgba(0, 0, 0, 0.06);\n"
 "    color: rgba(0, 0, 0, 0.7);\n"
 "}")
-        self.ComboBox.setText("")
-        self.ComboBox.setObjectName("ComboBox")
-        self.PushButton = PushButton(parent=self.centralwidget)
-        self.PushButton.setGeometry(QtCore.QRect(330, 100, 106, 34))
-        self.PushButton.setObjectName("PushButton")
+        self.ConnectionTypeComboBox.setText("")
+        self.ConnectionTypeComboBox.setObjectName("ComboBox")
+        self.ConnectBtn = PushButton(parent=self.centralwidget)
+        self.ConnectBtn.setGeometry(QtCore.QRect(330, 100, 106, 34))
+        self.ConnectBtn.setObjectName("PushButton")
         self.ListView = ListView(parent=self.centralwidget)
         self.ListView.setGeometry(QtCore.QRect(10, 280, 461, 351))
         self.ListView.setObjectName("ListView")
-        self.PushButton_2 = PushButton(parent=self.centralwidget)
-        self.PushButton_2.setGeometry(QtCore.QRect(20, 220, 106, 34))
-        self.PushButton_2.setObjectName("PushButton_2")
-        self.PushButton_3 = PushButton(parent=self.centralwidget)
-        self.PushButton_3.setGeometry(QtCore.QRect(140, 220, 106, 34))
-        self.PushButton_3.setObjectName("PushButton_3")
+        self.StartBtn = PushButton(parent=self.centralwidget)
+        self.StartBtn.setGeometry(QtCore.QRect(20, 220, 106, 34))
+        self.StartBtn.setObjectName("PushButton_2")
+        self.PauseBtn = PushButton(parent=self.centralwidget)
+        self.PauseBtn.setGeometry(QtCore.QRect(140, 220, 106, 34))
+        self.PauseBtn.setObjectName("PushButton_3")
         self.label_2 = QtWidgets.QLabel(parent=self.centralwidget)
         self.label_2.setGeometry(QtCore.QRect(220, 100, 100, 34))
         font = QtGui.QFont()
@@ -121,8 +121,8 @@ class Ui_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "碧蓝档案初始号工具"))
         self.label.setText(_translate("MainWindow", "连接模式"))
-        self.PushButton.setText(_translate("MainWindow", "连接"))
-        self.PushButton_2.setText(_translate("MainWindow", "开始"))
-        self.PushButton_3.setText(_translate("MainWindow", "暂停"))
+        self.ConnectBtn.setText(_translate("MainWindow", "连接"))
+        self.StartBtn.setText(_translate("MainWindow", "开始"))
+        self.PauseBtn.setText(_translate("MainWindow", "暂停"))
         self.label_2.setText(_translate("MainWindow", "未连接"))
 from qfluentwidgets import ComboBox, ListView, PushButton
