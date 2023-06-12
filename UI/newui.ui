@@ -199,10 +199,16 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
         <item>
          <widget class="PushButton" name="ConnectBtn">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Maximum">
+           <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
           </property>
           <property name="text">
            <string>连接</string>
@@ -212,10 +218,16 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
         <item>
          <widget class="PushButton" name="DisConnectBtn">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Maximum">
+           <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>120</width>
+            <height>0</height>
+           </size>
           </property>
           <property name="text">
            <string>断开连接</string>
@@ -247,10 +259,16 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
       <item>
        <widget class="PushButton" name="StartBtn">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+         <sizepolicy hsizetype="Fixed" vsizetype="Maximum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>0</height>
+         </size>
         </property>
         <property name="text">
          <string>开始</string>
@@ -260,10 +278,16 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
       <item>
        <widget class="PushButton" name="PauseBtn">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
+         <sizepolicy hsizetype="Fixed" vsizetype="Maximum">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>20</height>
+         </size>
         </property>
         <property name="text">
          <string>暂停</string>
