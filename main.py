@@ -45,7 +45,7 @@ class App(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.pool = QThreadPool()  # TODO 多线程开发
         self.setupUi(self)
-        self.setFixedSize(self.width(), self.height())
+        # self.setFixedSize(self.width(), self.height())
 
         # variables init
         self.sp: Optional[sp] = None

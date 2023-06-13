@@ -1,0 +1,2 @@
+class StopInterruptions(BaseException):
+    pass
