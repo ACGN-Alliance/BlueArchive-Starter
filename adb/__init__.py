@@ -1,3 +1,4 @@
+from .Interruptions import StopInterruptions
 from .adb_utils import Adb
 from .script import script_dict, Script
 from log import LoggerDisplay
@@ -27,11 +28,14 @@ class ScriptParse(QThread):
     interrupt = pyqtSignal(int)
     instructionExecuted = pyqtSignal(int)
 
+    done = pyqtSignal(int)
+    aborted = pyqtSignal(int)
+
     @staticmethod
     def device_on() -> bool:
         if not (rv := Adb.have_device()):
             print("No device found, sp exiting...")
-            return rv
+            return False
         return True
 
     def __init__(self, script: Script, ID=0, instructionPointer=-1):
@@ -47,42 +51,39 @@ class ScriptParse(QThread):
         # a Register that save the current state of ScriptParse,VISIBLE to the user
         self.PSW = ScriptParsePSW()
 
+        self.Exception = None
+
     # =============== PRIVATE METHODS ===============
 
-    def _fetchInstruction(self) -> bool:
+    def _fetchInstruction(self):
         """
         fetch the next instruction
-        return False if it needs to stop
         """
         self.IR = self.script[self.IP]
         self.IP += 1
 
         if self.IR is None:
-            return False
-        else:
-            return True
+            raise StopInterruptions
 
-    def _executeInstruction(self) -> bool:
+    def _executeInstruction(self):
         """
         execute the current instruction
-        return False if it needs to stop
         """
         # simulate executing...
-        self.msleep(1000)
         print("executed:", self.IR)
         self.instructionExecuted.emit(self.ID)
         return True
 
-    def _interruptPeriod(self) -> bool:
+    def _interruptPeriod(self):
         """
         interrupt period:
         followed the fetchInstruction and the executeInstruction period,
         there is a period that can check state and be allowed to process and answer the external events and requests
-        return False if it needs to stop
         """
+
         # check state
         if not self.device_on():
-            return False
+            self.Exception = StopInterruptions()
 
         if self.PSW.PAUSED:
             self._onPaused()
@@ -90,11 +91,18 @@ class ScriptParse(QThread):
             while self.PSW.PAUSED:
                 self.msleep(100)
                 if not self.device_on():
-                    return False
+                    self.Exception = StopInterruptions()
+                    break
 
             self._onResumed()
 
         self.interrupt.emit(self.ID)
+
+        # process exceptions
+        match self.Exception:
+            case StopInterruptions():
+                return False
+
         return True
         # check state
 
@@ -121,24 +129,39 @@ class ScriptParse(QThread):
     def run(self):
 
         self.Pause()
-        if not self._interruptPeriod():
+        try:
+            self._interruptPeriod()
+        except StopInterruptions:
             return
 
         # main
         while True:
-            if not self._fetchInstruction():
-                break
-
-            if not self._executeInstruction():
-                break
-
-            if not self._interruptPeriod():
-                break
+            try:
+                # atom operation
+                self._fetchInstruction()
+                self._executeInstruction()
+            except BaseException as e:
+                self.Exception = e
+            finally:
+                # interrupt period
+                if not self._interruptPeriod():
+                    break
+                # leave time to receive the external events and requests
+                self.msleep(1000)
+                # interrupt period
+                if not self._interruptPeriod():
+                    break
 
         if self.IP == self.script.BeginAddress + self.script.Length:
             self.PSW.FINISHED = True
             self.PSW.PAUSED = False
-        print("finished")
+            # send done signal
+            print("done")
+            self.done.emit(self.ID)
+        else:
+            # send aborted signal
+            print("aborted")
+            self.aborted.emit(self.ID)
 
     def Pause(self):
         self.PSW.PAUSED = True
