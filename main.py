@@ -49,15 +49,15 @@ class App(QMainWindow, Ui_MainWindow):
         self.pool = QThreadPool()  # TODO 多线程开发
         self.setupUi(self)
         self.resize(750, 900)
-        # self.setFixedSize(self.width(), self.height())
 
         # variables init
         self.sp: Optional[sp] = None
         self.listener = None
+        self.deviceMapping = {}  # 设备序列号映射
 
         # widget init
-        self.ConnectionTypeComboBox.addItems([mode for mode in connect_mode.keys()])
-        self.ConnectionTypeComboBox.setCurrentText("USB调试")
+        # self.ConnectionChoiceComboBox.addItems([mode for mode in connect_mode.keys()])
+        self.ConnectionChoiceComboBox.setCurrentText("请点击扫描获取设备列表")
         self.StartBtn.setEnabled(False)
         self.PauseBtn.setEnabled(False)
         self.DisConnectBtn.setEnabled(False)
@@ -71,6 +71,7 @@ class App(QMainWindow, Ui_MainWindow):
         self.StartBtn.clicked.connect(self.startBtnClickedHandler)
         self.PauseBtn.clicked.connect(self.pauseBtnClickedHandler)
         self.DisConnectBtn.clicked.connect(self.disconnectBtnClickedHandler)
+        self.ScanBtn.clicked.connect(self.scanBtnClickedHandler)
 
     @pyqtSlot()
     def spPausedHandler(self):
@@ -89,7 +90,7 @@ class App(QMainWindow, Ui_MainWindow):
             self.PauseBtn.setEnabled(False)
             self.DisConnectBtn.setEnabled(False)
             self.ConnectBtn.setEnabled(True)
-            self.ConnectionTypeComboBox.setEnabled(True)
+            self.ConnectionChoiceComboBox.setEnabled(True)
             self.logger.warning("连接失效~请重新连接")
 
     @pyqtSlot()
@@ -108,7 +109,7 @@ class App(QMainWindow, Ui_MainWindow):
             self.PauseBtn.setEnabled(False)
             self.DisConnectBtn.setEnabled(False)
             self.ConnectBtn.setEnabled(True)
-            self.ConnectionTypeComboBox.setEnabled(True)
+            self.ConnectionChoiceComboBox.setEnabled(True)
             self.logger.warning("连接失效~请重新连接")
 
     @pyqtSlot()
@@ -119,7 +120,7 @@ class App(QMainWindow, Ui_MainWindow):
         """
         self.DisConnectBtn.setEnabled(False)
         self.ConnectBtn.setEnabled(True)
-        self.ConnectionTypeComboBox.setEnabled(True)
+        self.ConnectionChoiceComboBox.setEnabled(True)
         self.StartBtn.setEnabled(False)
         self.PauseBtn.setEnabled(False)
         self.logger.error("连接异常断开~请重新连接")
@@ -167,9 +168,38 @@ class App(QMainWindow, Ui_MainWindow):
             self.PauseBtn.setEnabled(False)
             self.DisConnectBtn.setEnabled(False)
             self.ConnectBtn.setEnabled(True)
-            self.ConnectionTypeComboBox.setEnabled(True)
+            self.ConnectionChoiceComboBox.setEnabled(True)
             self.label_2.setText("未连接")
             self.logger.info("连接已断开~请重新连接")
+
+    @pyqtSlot()
+    def scanBtnClickedHandler(self):
+        def device_info(device_: tuple):
+            mode = device_[2].split(":")[0]
+            name = device_[3].split(":")[1]
+            return f"{name}:{mode}"
+        self.ScanBtn.setEnabled(False)
+        lst = Adb.get_device_list(all=True)
+
+        if len(lst) == 0:
+            self.ScanBtn.setEnabled(True)
+            self.logger.error("未扫描到设备~请检查设备是否连接")
+            return
+
+        self.ConnectionChoiceComboBox.clear()
+
+        is_first = True
+        count = 0
+        for device in lst:
+            self.ConnectionChoiceComboBox.addItem(device_info(device))
+            self.deviceMapping[device[3].split(":")[1]] = device[0]
+            count += 1
+            if is_first:
+                self.ConnectionChoiceComboBox.setCurrentText(device_info(device))
+                is_first = False
+
+        self.logger.info(f"扫描完成, 共扫描到{count}台设备~")
+        self.ScanBtn.setEnabled(True)
 
     @pyqtSlot()
     def spFinishedHandler(self):
@@ -206,43 +236,32 @@ class App(QMainWindow, Ui_MainWindow):
 
         def connect_fail(label_text: str, err_msg: str):
             self.ConnectBtn.setEnabled(True)
-            self.ConnectionTypeComboBox.setEnabled(True)
+            self.ConnectionChoiceComboBox.setEnabled(True)
             self.label_2.setText(label_text)
             self.logger.error(err_msg)
 
         self.ConnectBtn.setEnabled(False)
-        self.ConnectionTypeComboBox.setEnabled(False)
+        self.ConnectionChoiceComboBox.setEnabled(False)
 
-        if not Adb.have_device():
-            connect_fail("未连接", "未检测到设备, 请检查设备是否连接")
+        if not self.ConnectionChoiceComboBox.currentText():
+            connect_fail("未连接", "未扫描到设备, 请重新扫描")
             return
 
-        self.adb = Adb()
+        serial = self.deviceMapping[self.ConnectionChoiceComboBox.currentText().split(":")[0]]
+        mode = self.ConnectionChoiceComboBox.currentText().split(":")[1]
+        self.adb = Adb(serial=serial)
 
-        if (mode := connect_mode[self.ConnectionTypeComboBox.currentText()]) == "USB":
-            # TODO 判断是否是USB连接
-            # device_lst = Adb.get_device_list()
-            # for device in device_lst:
-            #     if "usb" in device[2] and self.adb.device_id == device[0]:
-            #         break
-            #     else:
-            #         connect_fail("未连接", "连接失败, 请检查USB连接是否存在")
-            #         return
-            serial = self.adb.device_id
+        self.logger.info(f"连接成功~选择的模式是{mode}, 设备ID为: {serial}")
+        # init script parser
+        self.initSp(serial)
 
-            self.logger.info(f"连接成功~选择的模式是USB, 设备ID为: {self.adb.device_id}")
-            # init script parser
-            self.initSp(serial)
-
-            # init connect listener
-            self.listener = ConnectListener(logger=self.logger, serial=serial)
-            #   connect connect listener signal
-            self.listener.disconnect.connect(self.listenerDisconnectedHandler)
-            #   start connect listener
-            self.listener.start()
-            self.label_2.setText("已连接")
-        else:
-            connect_fail("未实现", "该功能尚在开发中, 敬请期待")
+        # init connect listener
+        self.listener = ConnectListener(logger=self.logger, serial=serial)
+        #   connect connect listener signal
+        self.listener.disconnect.connect(self.listenerDisconnectedHandler)
+        #   start connect listener
+        self.listener.start()
+        self.label_2.setText("已连接")
 
     def initSp(self, serial):
         # init script parser

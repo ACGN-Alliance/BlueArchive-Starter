@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>481</width>
-    <height>651</height>
+    <width>556</width>
+    <height>685</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,17 +18,9 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
-       <widget class="QLabel" name="ConnectionTypeLabel">
-        <property name="font">
-         <font>
-          <pointsize>13</pointsize>
-         </font>
-        </property>
+       <widget class="PushButton" name="ScanBtn">
         <property name="text">
-         <string>连接模式</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
+         <string>扫描</string>
         </property>
        </widget>
       </item>
@@ -42,14 +34,14 @@
         </property>
         <property name="sizeHint" stdset="0">
          <size>
-          <width>40</width>
+          <width>60</width>
           <height>20</height>
          </size>
         </property>
        </spacer>
       </item>
       <item>
-       <widget class="ComboBox" name="ConnectionTypeComboBox">
+       <widget class="ComboBox" name="ConnectionChoiceComboBox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
           <horstretch>0</horstretch>

@@ -1,6 +1,15 @@
 from subprocess import Popen, PIPE
 import platform as pf
 
+# 验证设备合法性装饰器
+def verify_device(func):
+    def wrapper(*args, **kwargs):
+        if not args[0].get_device_id() == args[0].device_id:
+            raise Exception("未检测到设备")
+        return func(*args, **kwargs)
+
+    return wrapper
+
 
 class Adb:
     if pf.system() == 'Windows':
@@ -17,7 +26,7 @@ class Adb:
         return len(cls.get_device_list()) != 0
 
     @classmethod
-    def get_device_list(cls) -> list:
+    def get_device_list(cls, *args, all: bool = False) -> list:
         """
         获取设备列表
         :return: tuple(序列号, 状态, 连接)
@@ -31,7 +40,16 @@ class Adb:
         for line in stdout.splitlines():
             line = line.decode('utf-8')
             if line.find("product") != -1:
-                devices.append((line.split()[0].strip(), line.split()[1].strip(), line.split()[2].strip()))
+                if all:
+                    devices.append((
+                        line.split()[0].strip(),
+                        line.split()[1].strip(),
+                        line.split()[2].strip(),
+                        line.split()[3].strip(),
+                        line.split()[4].strip())
+                    )
+                else:
+                    devices.append((line.split()[0].strip(), line.split()[1].strip(), line.split()[2].strip()))
 
         return devices
 
@@ -44,7 +62,12 @@ class Adb:
             raise Exception(stderr)
         return stdout.strip() == b'device'
 
+    def verify_device(self) -> bool:
+        return self.get_device_id() == self.device_id
+
     def command(self, *args):
+        if self.verify_device():
+            raise Exception("未检测到设备")
         cmd = [self.adb_path]
         cmd.extend(args)
         return Popen(cmd, stdout=PIPE, stderr=PIPE)
@@ -59,6 +82,8 @@ class Adb:
         return stdout.strip().decode("utf-8")
 
     def shell(self, *args):
+        if self.verify_device():
+            raise Exception("未检测到设备")
         cmd = [self.adb_path]
         cmd.extend(['shell'])
         cmd.extend(args)

@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '.\UI\newui.ui'
+# Form implementation generated from reading ui file 'newui.ui'
 #
 # Created by: PyQt6 UI code generator 6.4.2
 #
@@ -12,29 +12,25 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(481, 651)
+        MainWindow.resize(556, 685)
         self.centralwidget = QtWidgets.QWidget(parent=MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.centralwidget)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.ConnectionTypeLabel = QtWidgets.QLabel(parent=self.centralwidget)
-        font = QtGui.QFont()
-        font.setPointSize(13)
-        self.ConnectionTypeLabel.setFont(font)
-        self.ConnectionTypeLabel.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.ConnectionTypeLabel.setObjectName("ConnectionTypeLabel")
-        self.horizontalLayout_3.addWidget(self.ConnectionTypeLabel)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Minimum)
+        self.ScanBtn = PushButton(parent=self.centralwidget)
+        self.ScanBtn.setObjectName("ScanBtn")
+        self.horizontalLayout_3.addWidget(self.ScanBtn)
+        spacerItem = QtWidgets.QSpacerItem(60, 20, QtWidgets.QSizePolicy.Policy.Fixed, QtWidgets.QSizePolicy.Policy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem)
-        self.ConnectionTypeComboBox = ComboBox(parent=self.centralwidget)
+        self.ConnectionChoiceComboBox = ComboBox(parent=self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Maximum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ConnectionTypeComboBox.sizePolicy().hasHeightForWidth())
-        self.ConnectionTypeComboBox.setSizePolicy(sizePolicy)
-        self.ConnectionTypeComboBox.setStyleSheet("ComboBox {\n"
+        sizePolicy.setHeightForWidth(self.ConnectionChoiceComboBox.sizePolicy().hasHeightForWidth())
+        self.ConnectionChoiceComboBox.setSizePolicy(sizePolicy)
+        self.ConnectionChoiceComboBox.setStyleSheet("ComboBox {\n"
 "    border: 1px solid rgba(0, 0, 0, 0.073);\n"
 "    border-radius: 5px;\n"
 "    border-bottom: 1px solid rgba(0, 0, 0, 0.183);\n"
@@ -101,9 +97,9 @@ class Ui_MainWindow(object):
 "    background-color: rgba(0, 0, 0, 0.06);\n"
 "    color: rgba(0, 0, 0, 0.7);\n"
 "}")
-        self.ConnectionTypeComboBox.setText("")
-        self.ConnectionTypeComboBox.setObjectName("ConnectionTypeComboBox")
-        self.horizontalLayout_3.addWidget(self.ConnectionTypeComboBox)
+        self.ConnectionChoiceComboBox.setText("")
+        self.ConnectionChoiceComboBox.setObjectName("ConnectionChoiceComboBox")
+        self.horizontalLayout_3.addWidget(self.ConnectionChoiceComboBox)
         self.verticalLayout_2.addLayout(self.horizontalLayout_3)
         spacerItem1 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
         self.verticalLayout_2.addItem(spacerItem1)
@@ -178,7 +174,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "碧蓝档案初始号工具"))
-        self.ConnectionTypeLabel.setText(_translate("MainWindow", "连接模式"))
+        self.ScanBtn.setText(_translate("MainWindow", "扫描"))
         self.label_2.setText(_translate("MainWindow", "未连接"))
         self.ConnectBtn.setText(_translate("MainWindow", "连接"))
         self.DisConnectBtn.setText(_translate("MainWindow", "断开连接"))
