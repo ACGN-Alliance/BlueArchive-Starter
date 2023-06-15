@@ -3,6 +3,7 @@ from typing import Any
 from qfluentwidgets import PlainTextEdit
 import time
 
+
 class LoggerDisplay:
     """
     日志显示
@@ -24,7 +25,7 @@ class LoggerDisplay:
             "CRITICAL": "darkred"
         }
         msg = str(msg)
-        time.sleep(0.3)  # 为了让日志显示更加舒适
+        # time.sleep(0.3)  # 为了让日志显示更加舒适
         return f"[{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}] | <font style=\"color:{color_dic.get(type_)};\">{type_}</font> |: {msg}\n"
 
     def info(self, msg: Any):

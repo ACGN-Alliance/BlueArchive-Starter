@@ -178,6 +178,9 @@ class App(QMainWindow, Ui_MainWindow):
         self.label_2.setText("已连接")
         self.logger.info("脚本运行结束~")
 
+        # get last thread`s serial number
+        self.initSp(self.adb.device_id)
+
     @pyqtSlot()
     def spAbortedHandler(self):
         self.StartBtn.setEnabled(True)
@@ -200,6 +203,7 @@ class App(QMainWindow, Ui_MainWindow):
         连接adb
         :return:
         """
+
         def connect_fail(label_text: str, err_msg: str):
             self.ConnectBtn.setEnabled(True)
             self.ConnectionTypeComboBox.setEnabled(True)
@@ -217,30 +221,18 @@ class App(QMainWindow, Ui_MainWindow):
 
         if (mode := connect_mode[self.ConnectionTypeComboBox.currentText()]) == "USB":
             # TODO 判断是否是USB连接
-            device_lst = Adb.get_device_list()
-            for device in device_lst:
-                if "usb" in device[2] and self.adb.device_id == device[0]:
-                    break
-                else:
-                    connect_fail("未连接", "连接失败, 请检查USB连接是否存在")
-                    return
+            # device_lst = Adb.get_device_list()
+            # for device in device_lst:
+            #     if "usb" in device[2] and self.adb.device_id == device[0]:
+            #         break
+            #     else:
+            #         connect_fail("未连接", "连接失败, 请检查USB连接是否存在")
+            #         return
             serial = self.adb.device_id
 
             self.logger.info(f"连接成功~选择的模式是USB, 设备ID为: {self.adb.device_id}")
             # init script parser
-            self.sp = sp(script=script, logger=self.logger, adb=self.adb, serial=serial)
-
-            #   connect script parser signal
-            self.sp.resumed.connect(self.spResumedHandler)
-
-            self.sp.paused.connect(self.spPausedHandler)
-            self.sp.done.connect(self.spFinishedHandler)
-            # self.sp.aborted.connect(self.spAbortedHandler)
-            self.sp.started.connect(lambda: self.PauseBtn.setEnabled(True))
-            self.sp.instructionExecuted.connect(self.spInstructionExecutedHandler)
-
-            #   start script parser
-            self.sp.start()
+            self.initSp(serial)
 
             # init connect listener
             self.listener = ConnectListener(logger=self.logger, serial=serial)
@@ -251,6 +243,23 @@ class App(QMainWindow, Ui_MainWindow):
             self.label_2.setText("已连接")
         else:
             connect_fail("未实现", "该功能尚在开发中, 敬请期待")
+
+    def initSp(self, serial):
+        # init script parser
+        self.sp = None
+        self.sp = sp(script=script, logger=self.logger, adb=self.adb, serial=serial)
+
+        #   connect script parser signal
+        self.sp.resumed.connect(self.spResumedHandler)
+
+        self.sp.paused.connect(self.spPausedHandler)
+        self.sp.done.connect(self.spFinishedHandler)
+        # self.sp.aborted.connect(self.spAbortedHandler)
+        self.sp.started.connect(lambda: self.PauseBtn.setEnabled(True))
+        self.sp.instructionExecuted.connect(self.spInstructionExecutedHandler)
+
+        #   start script parser
+        self.sp.start()
 
 
 if __name__ == '__main__':
