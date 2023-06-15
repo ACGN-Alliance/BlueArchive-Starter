@@ -34,22 +34,23 @@ class ScriptParse(QThread):
     @staticmethod
     def device_on() -> bool:
         if not (rv := Adb.have_device()):
-            print("No device found, sp exiting...")
             return False
         return True
 
-    def __init__(self, script: Script, ID=0, instructionPointer=-1):
+    def __init__(self, script: Script, id_=0, instruction_pointer=-1, *args, logger: LoggerDisplay = None):
         super().__init__()
         # thread ID
-        self.ID = ID
+        self.ID = id_
         # a pointer that point to the next instruction, VISIBLE to the user
-        self.IP = max(script.BeginAddress, instructionPointer)
+        self.IP = max(script.BeginAddress, instruction_pointer)
         # a Register that save the current instruction, INVISIBLE to the user
         self.IR = None
         # a Register that save the current script
         self.script = script
         # a Register that save the current state of ScriptParse,VISIBLE to the user
         self.PSW = ScriptParsePSW()
+        # logger
+        self.logger = logger
 
         self.Exception = None
 
@@ -70,7 +71,7 @@ class ScriptParse(QThread):
         execute the current instruction
         """
         # simulate executing...
-        print("executed:", self.IR)
+        self.logger.info(f"正在执行:{self.IR}")
         self.instructionExecuted.emit(self.ID)
         return True
 
@@ -112,7 +113,7 @@ class ScriptParse(QThread):
         """
         self.PSW.PAUSED = True
         self.paused.emit()
-        print("paused")
+        self.logger.debug("任务暂停")
 
     def _onResumed(self):
         """
@@ -120,7 +121,7 @@ class ScriptParse(QThread):
         """
         self.PSW.PAUSED = False
         self.resumed.emit()
-        print("resumed")
+        self.logger.debug("任务恢复")
 
     # =============== PRIVATE METHODS ===============
 
@@ -156,11 +157,11 @@ class ScriptParse(QThread):
             self.PSW.FINISHED = True
             self.PSW.PAUSED = False
             # send done signal
-            print("done")
+            self.logger.debug("完成")
             self.done.emit(self.ID)
         else:
             # send aborted signal
-            print("aborted")
+            self.logger.debug("终止")
             self.aborted.emit(self.ID)
 
     def Pause(self):

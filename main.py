@@ -23,8 +23,9 @@ class ConnectListener(QThread):
     """
     disconnect = pyqtSignal(bool)
 
-    def __init__(self):
+    def __init__(self, logger: LoggerDisplay):
         super().__init__()
+        self.logger = logger
 
     def __del__(self):
         self.wait()
@@ -34,6 +35,7 @@ class ConnectListener(QThread):
             time.sleep(3)
             if not sp.device_on():
                 self.disconnect.emit(True)
+                self.logger.error("设备断开连接")
                 break
         self.quit()
 
@@ -202,7 +204,7 @@ class App(QMainWindow, Ui_MainWindow):
         if (mode := connect_mode[self.ConnectionTypeComboBox.currentText()]) == "USB":
             self.logger.info(f"连接成功~选择的模式是USB")
             # init script parser
-            self.sp = sp(script=script)
+            self.sp = sp(script=script, logger=self.logger)
 
             #   connect script parser signal
             self.sp.resumed.connect(self.spResumedHandler)
@@ -217,7 +219,7 @@ class App(QMainWindow, Ui_MainWindow):
             self.sp.start()
 
             # init connect listener
-            self.listener = ConnectListener()
+            self.listener = ConnectListener(logger=self.logger)
             #   connect connect listener signal
             self.listener.disconnect.connect(self.listenerDisconnectedHandler)
             #   start connect listener

@@ -1,12 +1,15 @@
 from qfluentwidgets import PlainTextEdit
 import time
 
+
 class LoggerDisplay:
     """
     日志显示
     """
-    def __init__(self, plain_text_edit: PlainTextEdit):
+
+    def __init__(self, plain_text_edit: PlainTextEdit, *args, debug: bool = False):
         self.pte = plain_text_edit
+        self.debug_mode = debug
 
     def reset(self):
         self.pte.clear()
@@ -31,8 +34,8 @@ class LoggerDisplay:
         self.pte.appendHtml(self._log_msg(msg, "WARNING"))
 
     def debug(self, msg: str):
-        self.pte.appendHtml(self._log_msg(msg, "DEBUG"))
+        if self.debug_mode:
+            self.pte.appendHtml(self._log_msg(msg, "DEBUG"))
 
     def critical(self, msg: str):
         self.pte.appendHtml(self._log_msg(msg, "CRITICAL"))
-
