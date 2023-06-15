@@ -6,7 +6,7 @@ from PyQt6.QtCore import QThreadPool, pyqtSignal, QThread, pyqtSlot
 import sys
 
 from UI.newui import Ui_MainWindow
-from adb import ScriptParse as sp
+from adb import ScriptParseThread as sp
 from adb.adb_utils import Adb
 from adb.script import script
 from log import LoggerDisplay
@@ -23,9 +23,10 @@ class ConnectListener(QThread):
     """
     disconnect = pyqtSignal(bool)
 
-    def __init__(self, logger: LoggerDisplay):
+    def __init__(self, logger: LoggerDisplay, serial: str):
         super().__init__()
         self.logger = logger
+        self.serial = serial
 
     def __del__(self):
         self.wait()
@@ -33,7 +34,7 @@ class ConnectListener(QThread):
     def run(self):
         while True:
             time.sleep(3)
-            if not sp.device_on():
+            if not Adb.if_device_online(self.serial):
                 self.disconnect.emit(True)
                 self.logger.error("设备断开连接")
                 break
@@ -47,6 +48,7 @@ class App(QMainWindow, Ui_MainWindow):
         super().__init__()
         self.pool = QThreadPool()  # TODO 多线程开发
         self.setupUi(self)
+        self.resize(750, 900)
         # self.setFixedSize(self.width(), self.height())
 
         # variables init
@@ -60,7 +62,7 @@ class App(QMainWindow, Ui_MainWindow):
         self.PauseBtn.setEnabled(False)
         self.DisConnectBtn.setEnabled(False)
         self.PlainTextEdit.setReadOnly(True)
-        self.logger = LoggerDisplay(self.PlainTextEdit)
+        self.logger = LoggerDisplay(self.PlainTextEdit, debug=True)
         self.logger.reset()
         self.logger.info("欢迎使用碧蓝档案初始号工具~作者: MRSlouzk, 群号: 769521861")
 
@@ -81,7 +83,7 @@ class App(QMainWindow, Ui_MainWindow):
             self.PauseBtn.setEnabled(False)
             self.DisConnectBtn.setEnabled(True)
             self.ConnectBtn.setEnabled(False)
-            self.logger.info("连接成功~点击开始按钮开始执行脚本")
+            self.logger.info("点击开始按钮开始执行脚本")
         else:
             self.StartBtn.setEnabled(False)
             self.PauseBtn.setEnabled(False)
@@ -176,6 +178,14 @@ class App(QMainWindow, Ui_MainWindow):
         self.label_2.setText("已连接")
         self.logger.info("脚本运行结束~")
 
+    @pyqtSlot()
+    def spAbortedHandler(self):
+        self.StartBtn.setEnabled(True)
+        self.PauseBtn.setEnabled(False)
+        self.logger.warning("脚本运行暂停~")
+        # self.sp.Pause()  # 释放资源 (to be deprecated)
+        # TODO 断点续运
+
     @pyqtSlot(int)
     def spInstructionExecutedHandler(self, threadID: int):
         # fetch thread object through threadID
@@ -190,28 +200,42 @@ class App(QMainWindow, Ui_MainWindow):
         连接adb
         :return:
         """
+        def connect_fail(label_text: str, err_msg: str):
+            self.ConnectBtn.setEnabled(True)
+            self.ConnectionTypeComboBox.setEnabled(True)
+            self.label_2.setText(label_text)
+            self.logger.error(err_msg)
 
         self.ConnectBtn.setEnabled(False)
         self.ConnectionTypeComboBox.setEnabled(False)
 
         if not Adb.have_device():
-            self.ConnectBtn.setEnabled(True)
-            self.ConnectionTypeComboBox.setEnabled(True)
-            self.label_2.setText("未连接")
-            self.logger.error("连接失败, 请检查设备是否存在")
+            connect_fail("未连接", "未检测到设备, 请检查设备是否连接")
             return
 
+        self.adb = Adb()
+
         if (mode := connect_mode[self.ConnectionTypeComboBox.currentText()]) == "USB":
-            self.logger.info(f"连接成功~选择的模式是USB")
+            # TODO 判断是否是USB连接
+            device_lst = Adb.get_device_list()
+            for device in device_lst:
+                if "usb" in device[2] and self.adb.device_id == device[0]:
+                    break
+                else:
+                    connect_fail("未连接", "连接失败, 请检查USB连接是否存在")
+                    return
+            serial = self.adb.device_id
+
+            self.logger.info(f"连接成功~选择的模式是USB, 设备ID为: {self.adb.device_id}")
             # init script parser
-            self.sp = sp(script=script, logger=self.logger)
+            self.sp = sp(script=script, logger=self.logger, adb=self.adb, serial=serial)
 
             #   connect script parser signal
             self.sp.resumed.connect(self.spResumedHandler)
-            # self.sp.logger_sign.connect(self.test_logger)  # 日志输出
 
             self.sp.paused.connect(self.spPausedHandler)
-            self.sp.finished.connect(self.spFinishedHandler)
+            self.sp.done.connect(self.spFinishedHandler)
+            # self.sp.aborted.connect(self.spAbortedHandler)
             self.sp.started.connect(lambda: self.PauseBtn.setEnabled(True))
             self.sp.instructionExecuted.connect(self.spInstructionExecutedHandler)
 
@@ -219,17 +243,14 @@ class App(QMainWindow, Ui_MainWindow):
             self.sp.start()
 
             # init connect listener
-            self.listener = ConnectListener(logger=self.logger)
+            self.listener = ConnectListener(logger=self.logger, serial=serial)
             #   connect connect listener signal
             self.listener.disconnect.connect(self.listenerDisconnectedHandler)
             #   start connect listener
             self.listener.start()
             self.label_2.setText("已连接")
         else:
-            self.ConnectBtn.setEnabled(True)
-            self.ConnectionTypeComboBox.setEnabled(True)
-            self.label_2.setText("未实现")
-            self.logger.warning("该功能尚在开发中, 敬请期待")
+            connect_fail("未实现", "该功能尚在开发中, 敬请期待")
 
 
 if __name__ == '__main__':

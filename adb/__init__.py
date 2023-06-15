@@ -24,7 +24,7 @@ class ScriptParsePSW:
         self.FINISHED = False
 
 
-class ScriptParse(QThread):
+class ScriptParseThread(QThread):
     paused = pyqtSignal()
     resumed = pyqtSignal()
 
@@ -35,13 +35,18 @@ class ScriptParse(QThread):
     done = pyqtSignal(int)
     aborted = pyqtSignal(int)
 
-    @staticmethod
-    def device_on() -> bool:
-        if not (rv := Adb.have_device()):
-            return False
-        return True
+    def device_on(self) -> bool:
+        return self.adb.device_id == self.serial
 
-    def __init__(self, script: Script, id_=0, instruction_pointer=-1, *args, logger: LoggerDisplay = None):
+    def __init__(self,
+                 script: Script,
+                 adb: Adb,
+                 serial: str,
+                 logger: LoggerDisplay,
+                 *args,
+                 id_: int = 0,
+                 instruction_pointer: int = -1,
+                 ):
         super().__init__()
         # thread ID
         self.ID = id_
@@ -55,8 +60,46 @@ class ScriptParse(QThread):
         self.PSW = ScriptParsePSW()
         # logger
         self.logger = logger
+        # device serial
+        self.serial = serial
+        # adb
+        self.adb = adb
 
         self.Exception = None
+
+    def _parser(self, script: dict):
+        """
+        脚本解析
+        :param script:
+        :return:
+        """
+        name = script.get("name", None)
+        action = script.get("action", None)
+        args = {k: v for k, v in script.items() if k not in ("name", "action")}
+
+        if action == "exit":
+            return -1
+        elif action == "adb":
+            out = self.adb.get_command_output(args["args"])
+        elif action == "ocr":
+            out = 0
+        else:
+            self.logger.error(f"未知的action:{action}")
+            return -1
+
+        cond = script.get("extra")
+        if not cond:
+            return -1
+        else:
+            for operation in cond:
+                if operation[0] == "return":
+                    if out == operation[1]:
+                        return 0
+                    else:
+                        return -1
+                else:
+                    self.logger.error(f"未知的操作:{operation[0]}")
+                    return -1
 
     # =============== PRIVATE METHODS ===============
 
@@ -76,6 +119,8 @@ class ScriptParse(QThread):
         """
         # simulate executing...
         self.logger.info(f"正在执行:{self.IR}")
+        ret = self._parser(self.IR)
+        # TODO ret=-1时结束
         self.instructionExecuted.emit(self.ID)
         return True
 
@@ -165,7 +210,7 @@ class ScriptParse(QThread):
             self.done.emit(self.ID)
         else:
             # send aborted signal
-            self.logger.debug("终止")
+            self.logger.debug("停止")
             self.aborted.emit(self.ID)
 
     def Pause(self):

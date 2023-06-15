@@ -1,37 +1,3 @@
-script_dict = {
-    1: {
-        "name": "adb操作",
-        "action": "adb",
-        "args": ["shell", "getprop", "ro.product.model"],
-        "condition": ["return", "Ok"]
-    },
-    2: {
-        "name": "图片识别",
-        "action": "ocr",
-        "pos_and_size": [20, 20, 40, 40],
-        "similar_image": "path/to/image"
-    },
-    3: {
-        "name": "图片识别",
-        "action": "ocr",
-        "pos_and_size": [20, 20, 40, 40],
-        "similar_image": "path/to/image"
-    },
-    4: {
-        "name": "图片识别",
-        "action": "ocr",
-        "pos_and_size": [20, 20, 40, 40],
-        "similar_image": "path/to/image"
-    },
-    5: {
-        "name": "图片识别",
-        "action": "ocr",
-        "pos_and_size": [20, 20, 40, 40],
-        "similar_image": "path/to/image"
-    }
-}
-
-
 class Script:
 
     @staticmethod
@@ -66,5 +32,42 @@ class Script:
     def BeginAddress(self):
         return self._beginAddress
 
+
+script_dict = {
+    1: {
+        "name": "adb操作",
+        "action": "adb",
+        "args": ["shell", "getprop", "ro.product.model"],
+        "extra": [("return", "Ok")]
+    },
+    2: {
+        "name": "图片识别",
+        "action": "ocr",
+        "pos_and_size": [20, 20, 40, 40],
+        "similar_image": "path/to/image"
+    },
+    3: {
+        "name": "图片识别",
+        "action": "ocr",
+        "pos_and_size": [20, 20, 40, 40],
+        "similar_image": "path/to/image"
+    },
+    4: {
+        "name": "图片识别",
+        "action": "ocr",
+        "pos_and_size": [20, 20, 40, 40],
+        "similar_image": "path/to/image"
+    },
+    5: {
+        "name": "图片识别",
+        "action": "ocr",
+        "pos_and_size": [20, 20, 40, 40],
+        "similar_image": "path/to/image"
+    },
+    6: {
+        "name": "终止",
+        "action": "exit"
+    }
+}
 
 script = Script(script_dict)
