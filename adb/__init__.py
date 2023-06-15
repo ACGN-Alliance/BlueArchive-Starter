@@ -22,6 +22,7 @@ class ScriptParsePSW:
     def __init__(self):
         self.PAUSED = False
         self.FINISHED = False
+        self.ENABLE_INTERRUPT = True
 
 
 class ScriptParseThread(QThread):
@@ -67,15 +68,17 @@ class ScriptParseThread(QThread):
 
         self.Exception = None
 
-    def _parser(self, script: dict):
+    # =============== PRIVATE METHODS ===============
+
+    def _parser(self, instruction: dict):
         """
         脚本解析
-        :param script:
+        :param instruction:
         :return:
         """
-        name = script.get("name", None)
-        action = script.get("action", None)
-        args = {k: v for k, v in script.items() if k not in ("name", "action")}
+        name = instruction.get("name", None)
+        action = instruction.get("action", None)
+        args = {k: v for k, v in instruction.items() if k not in ("name", "action")}
 
         if action == "exit":
             return -1
@@ -87,7 +90,7 @@ class ScriptParseThread(QThread):
             self.logger.error(f"未知的action:{action}")
             return -1
 
-        cond = script.get("extra")
+        cond = instruction.get("extra")
         if not cond:
             return -1
         else:
@@ -101,17 +104,16 @@ class ScriptParseThread(QThread):
                     self.logger.error(f"未知的操作:{operation[0]}")
                     return -1
 
-    # =============== PRIVATE METHODS ===============
-
     def _fetchInstruction(self):
         """
         fetch the next instruction
         """
         self.IR = self.script[self.IP]
-        self.IP += 1
 
         if self.IR is None:
             raise StopInterruptions
+
+        self.IP += 1
 
     def _executeInstruction(self):
         """
@@ -131,24 +133,32 @@ class ScriptParseThread(QThread):
         there is a period that can check state and be allowed to process and answer the external events and requests
         """
 
+        # process interrupt operations that can be ignored
+
+        if self.PSW.ENABLE_INTERRUPT:
+            # disable interrupt 关中断
+            self.PSW.ENABLE_INTERRUPT = False
+
+            # process pause interruption instruction
+            if self.PSW.PAUSED:
+                self._onPaused()
+                # process interrupt 中断处理
+                while self.PSW.PAUSED:
+                    self.msleep(100)
+                    self._interruptPeriod()
+                self._onResumed()
+
+            # enable interrupt 开中断
+            self.PSW.ENABLE_INTERRUPT = True
+
+        # process interrupt operations that can not be ignored
         # check state
         if not self.device_on():
             self.Exception = StopInterruptions()
 
-        if self.PSW.PAUSED:
-            self._onPaused()
-
-            while self.PSW.PAUSED:
-                self.msleep(100)
-                if not self.device_on():
-                    self.Exception = StopInterruptions()
-                    break
-
-            self._onResumed()
-
         self.interrupt.emit(self.ID)
 
-        # process exceptions
+        # process exceptions,
         match self.Exception:
             case StopInterruptions():
                 return False
@@ -197,7 +207,7 @@ class ScriptParseThread(QThread):
                 if not self._interruptPeriod():
                     break
                 # leave time to receive the external events and requests
-                self.msleep(1000)
+                self.msleep(500)
                 # interrupt period
                 if not self._interruptPeriod():
                     break
@@ -210,7 +220,7 @@ class ScriptParseThread(QThread):
             self.done.emit(self.ID)
         else:
             # send aborted signal
-            self.logger.debug("停止")
+            self.logger.debug(f"停止")
             self.aborted.emit(self.ID)
 
     def Pause(self):
@@ -238,8 +248,7 @@ class ScriptParseManager:
     """
     _CURRENT_ID = 0
     _MAX_INSTANCES = -1
-
-    _instances = WeakValueDictionary()
+    _instances: WeakValueDictionary[str, ScriptParseThread] = WeakValueDictionary()
 
     @classmethod
     def newInstance(cls, script: Script, instructionPointer=-1) -> Optional[int]:
@@ -250,7 +259,10 @@ class ScriptParseManager:
             return None
         ID = cls._CURRENT_ID
         cls._CURRENT_ID += 1
-        cls._instances[str(ID)] = ScriptParse(script, ID, instructionPointer)
+        _ = ScriptParseThread(script, ID, instructionPointer)
+        _.start()
+        cls._instances[str(ID)] = _
+        del _
         return ID
 
     @classmethod
@@ -258,7 +270,4 @@ class ScriptParseManager:
         """
         get the instance of ScriptParse by ID
         """
-        return cls._instances.get(ID, None)
-
-
-
+        return cls._instances.get(str(ID), None)
