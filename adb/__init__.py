@@ -1,3 +1,7 @@
+import weakref
+from typing import Optional
+from weakref import WeakValueDictionary
+
 from .Interruptions import StopInterruptions
 from .adb_utils import Adb
 from .script import script_dict, Script
@@ -179,3 +183,36 @@ class ScriptParse(QThread):
         self.Resume()
 
     # =============== PUBLIC METHODS ===============
+
+
+class ScriptParseManager:
+    """
+    a class that manage the ScriptParse
+    singleton
+    """
+    _CURRENT_ID = 0
+    _MAX_INSTANCES = -1
+
+    _instances = WeakValueDictionary()
+
+    @classmethod
+    def newInstance(cls, script: Script, instructionPointer=-1) -> Optional[int]:
+        """
+        create a new instance of ScriptParse
+        """
+        if cls._MAX_INSTANCES != -1 and len(cls._instances) >= cls._MAX_INSTANCES:
+            return None
+        ID = cls._CURRENT_ID
+        cls._CURRENT_ID += 1
+        cls._instances[str(ID)] = ScriptParse(script, ID, instructionPointer)
+        return ID
+
+    @classmethod
+    def getInstance(cls, ID):
+        """
+        get the instance of ScriptParse by ID
+        """
+        return cls._instances.get(ID, None)
+
+
+
