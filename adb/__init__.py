@@ -1,4 +1,3 @@
-import weakref
 from typing import Optional
 from weakref import WeakValueDictionary
 
@@ -8,11 +7,6 @@ from .script import script_dict, Script
 from log import LoggerDisplay
 
 from PyQt6.QtCore import QThread, pyqtSignal
-
-
-def _have_device():
-    return len(Adb.get_device_list()) != 0
-
 
 class ScriptParsePSW:
     """
@@ -85,24 +79,9 @@ class ScriptParseThread(QThread):
         elif action == "adb":
             out = self.adb.get_command_output(args["args"])
         elif action == "ocr":
-            out = 0
+            pass
         else:
-            self.logger.error(f"未知的action:{action}")
-            return -1
-
-        cond = instruction.get("extra")
-        if not cond:
-            return -1
-        else:
-            for operation in cond:
-                if operation[0] == "return":
-                    if out == operation[1]:
-                        return 0
-                    else:
-                        return -1
-                else:
-                    self.logger.error(f"未知的操作:{operation[0]}")
-                    return -1
+            raise NotImplementedError
 
     def _fetchInstruction(self):
         """
@@ -122,7 +101,7 @@ class ScriptParseThread(QThread):
         # simulate executing...
         self.logger.info(f"正在执行:{self.IR}")
         ret = self._parser(self.IR)
-        # TODO ret=-1时结束
+        # TODO ret = -1时结束
         self.instructionExecuted.emit(self.ID)
         return True
 

@@ -1,29 +1,33 @@
 import time
-from typing import Optional
+from typing import Optional, List
+import sys, os
 
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt6.QtCore import QThreadPool, pyqtSignal, QThread, pyqtSlot
-import sys
 
 from UI.newui import Ui_MainWindow
+from qfluentwidgets import PushButton
+
 from adb import ScriptParseThread as sp
 from adb.adb_utils import Adb
 from adb.script import script
 from log import LoggerDisplay
 
-connect_mode = {
-    "USB调试": "USB",
-    "蓝叠模拟器(开发中)": "BlueStacks"
-}
-
+__version__ = "inner dev"
 
 class ConnectListener(QThread):
     """
     adb连接监听
     """
-    disconnect = pyqtSignal(bool)
+    disconnect = pyqtSignal(bool)  # 连接断开时发出信号
 
     def __init__(self, logger: LoggerDisplay, serial: str):
+        """
+        初始化监听器
+
+        :param logger:  LoggerDisplay对象
+        :param serial: 设备序列号=>用于对应设备
+        """
         super().__init__()
         self.logger = logger
         self.serial = serial
@@ -42,7 +46,10 @@ class ConnectListener(QThread):
 
 
 class App(QMainWindow, Ui_MainWindow):
-    sign = pyqtSignal(bool)
+    """
+    主窗体
+
+    """
 
     def __init__(self):
         super().__init__()
@@ -56,15 +63,22 @@ class App(QMainWindow, Ui_MainWindow):
         self.deviceMapping = {}  # 设备序列号映射
 
         # widget init
-        # self.ConnectionChoiceComboBox.addItems([mode for mode in connect_mode.keys()])
         self.ConnectionChoiceComboBox.setCurrentText("请点击扫描获取设备列表")
+        self.VersionLabel.setText(f"版本:{__version__}")
         self.StartBtn.setEnabled(False)
         self.PauseBtn.setEnabled(False)
         self.DisConnectBtn.setEnabled(False)
         self.PlainTextEdit.setReadOnly(True)
-        self.logger = LoggerDisplay(self.PlainTextEdit, debug=True)
+
+        if not os.path.exists("platform-tools"):
+            QMessageBox.critical(self, "错误", "未找到adb工具,请将下载好的platform-tools文件夹放置在本程序同一目录下")
+            sys.exit()
+
+        self.btn_lst = [self.StartBtn, self.PauseBtn, self.DisConnectBtn, self.ConnectBtn]
+
+        self.logger = LoggerDisplay(self.PlainTextEdit, debug=True)  # 创建日志显示器
         self.logger.reset()
-        self.logger.info("欢迎使用碧蓝档案初始号工具~作者: MRSlouzk, 群号: 769521861")
+        self.logger.start_info()
 
         # signal connect
         self.ConnectBtn.clicked.connect(self.connect_adb)
@@ -73,6 +87,27 @@ class App(QMainWindow, Ui_MainWindow):
         self.DisConnectBtn.clicked.connect(self.disconnectBtnClickedHandler)
         self.ScanBtn.clicked.connect(self.scanBtnClickedHandler)
 
+    def btnOperation(self, btn_list: List[PushButton], switch: List[bool | None] | bool):
+        """
+        批量操作按钮
+        :param btn_list: 按钮对象列表
+        :param switch:
+        :return:
+        """
+        if isinstance(switch, bool):
+            for btn in btn_list:
+                btn.setEnabled(switch)
+        elif isinstance(switch, list):
+            if len(btn_list) != len(switch):
+                raise ValueError("btnList and switch must have the same length")
+            for i in range(len(btn_list)):
+                if switch[i] is not None:
+                    btn_list[i].setEnabled(switch[i])
+                else:
+                    continue
+        else:
+            raise TypeError("switch must be bool or list")
+
     @pyqtSlot()
     def spPausedHandler(self):
         """
@@ -80,16 +115,10 @@ class App(QMainWindow, Ui_MainWindow):
         :return:
         """
         if self.sp is not None and not self.sp.PSW.FINISHED:
-            self.StartBtn.setEnabled(True)
-            self.PauseBtn.setEnabled(False)
-            self.DisConnectBtn.setEnabled(True)
-            self.ConnectBtn.setEnabled(False)
+            self.btnOperation(self.btn_lst, [True, False, True, False])
             self.logger.info("点击开始按钮开始执行脚本")
         else:
-            self.StartBtn.setEnabled(False)
-            self.PauseBtn.setEnabled(False)
-            self.DisConnectBtn.setEnabled(False)
-            self.ConnectBtn.setEnabled(True)
+            self.btnOperation(self.btn_lst, [False, False, False, True])
             self.ConnectionChoiceComboBox.setEnabled(True)
             self.logger.warning("连接失效~请重新连接")
 
@@ -100,15 +129,10 @@ class App(QMainWindow, Ui_MainWindow):
         :return:
         """
         if self.sp is not None and not self.sp.PSW.FINISHED:
-            self.StartBtn.setEnabled(False)
-            self.PauseBtn.setEnabled(True)
-            self.ConnectBtn.setEnabled(False)
+            self.btnOperation(self.btn_lst, [False, True, None, False])
             self.logger.info("正在运行~点击暂停按钮暂停脚本")
         else:
-            self.StartBtn.setEnabled(False)
-            self.PauseBtn.setEnabled(False)
-            self.DisConnectBtn.setEnabled(False)
-            self.ConnectBtn.setEnabled(True)
+            self.btnOperation(self.btn_lst, [False, False, False, True])
             self.ConnectionChoiceComboBox.setEnabled(True)
             self.logger.warning("连接失效~请重新连接")
 
@@ -118,11 +142,8 @@ class App(QMainWindow, Ui_MainWindow):
         连接断开
         :return:
         """
-        self.DisConnectBtn.setEnabled(False)
-        self.ConnectBtn.setEnabled(True)
+        self.btnOperation(self.btn_lst, [False, False, False, True])
         self.ConnectionChoiceComboBox.setEnabled(True)
-        self.StartBtn.setEnabled(False)
-        self.PauseBtn.setEnabled(False)
         self.logger.error("连接异常断开~请重新连接")
 
     @pyqtSlot()
@@ -133,10 +154,7 @@ class App(QMainWindow, Ui_MainWindow):
         """
         if self.sp is not None and self.sp.PSW.PAUSED:
             self.sp.Resume()
-
-            self.StartBtn.setEnabled(False)
-            self.PauseBtn.setEnabled(True)
-            self.ConnectBtn.setEnabled(False)
+            self.btnOperation(self.btn_lst, [False, True, None, False])
             self.label_2.setText("正在运行")
             self.logger.info("开始运行脚本~点击暂停按钮暂停脚本")
 
@@ -149,9 +167,7 @@ class App(QMainWindow, Ui_MainWindow):
         if self.sp is not None and not self.sp.PSW.PAUSED:
             self.sp.Pause()
 
-            self.StartBtn.setEnabled(True)
-            self.PauseBtn.setEnabled(False)
-            self.ConnectBtn.setEnabled(False)
+            self.btnOperation(self.btn_lst, [True, False, None, False])
             self.label_2.setText("执行暂停")
             self.logger.info("脚本运行已暂停, 点击开始按钮继续运行脚本")
 
@@ -164,20 +180,22 @@ class App(QMainWindow, Ui_MainWindow):
         if self.sp is not None:
             self.sp.Pause()
 
-            self.StartBtn.setEnabled(False)
-            self.PauseBtn.setEnabled(False)
-            self.DisConnectBtn.setEnabled(False)
-            self.ConnectBtn.setEnabled(True)
+            self.btnOperation(self.btn_lst, [False, False, False, True])
             self.ConnectionChoiceComboBox.setEnabled(True)
             self.label_2.setText("未连接")
             self.logger.info("连接已断开~请重新连接")
 
     @pyqtSlot()
     def scanBtnClickedHandler(self):
+        """
+        扫描设备
+        :return:
+        """
         def device_info(device_: tuple):
             mode = device_[2].split(":")[0]
             name = device_[3].split(":")[1]
             return f"{name}:{mode}"
+
         self.ScanBtn.setEnabled(False)
         lst = Adb.get_device_list(all=True)
 
@@ -244,7 +262,7 @@ class App(QMainWindow, Ui_MainWindow):
         self.ConnectionChoiceComboBox.setEnabled(False)
 
         if not self.ConnectionChoiceComboBox.currentText():
-            connect_fail("未连接", "未扫描到设备, 请重新扫描")
+            connect_fail("未连接", "设备列表为空, 请重新扫描")
             return
 
         serial = self.deviceMapping[self.ConnectionChoiceComboBox.currentText().split(":")[0]]
@@ -270,7 +288,6 @@ class App(QMainWindow, Ui_MainWindow):
 
         #   connect script parser signal
         self.sp.resumed.connect(self.spResumedHandler)
-
         self.sp.paused.connect(self.spPausedHandler)
         self.sp.done.connect(self.spFinishedHandler)
         # self.sp.aborted.connect(self.spAbortedHandler)

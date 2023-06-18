@@ -293,11 +293,18 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
         </property>
         <property name="sizeHint" stdset="0">
          <size>
-          <width>40</width>
+          <width>30</width>
           <height>20</height>
          </size>
         </property>
        </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="VersionLabel">
+        <property name="text">
+         <string>当前版本</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>

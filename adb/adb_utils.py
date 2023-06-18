@@ -1,17 +1,8 @@
 from subprocess import Popen, PIPE
 import platform as pf
 
-# 验证设备合法性装饰器
-def verify_device(func):
-    def wrapper(*args, **kwargs):
-        if not args[0].get_device_id() == args[0].device_id:
-            raise Exception("未检测到设备")
-        return func(*args, **kwargs)
-
-    return wrapper
-
-
 class Adb:
+    # 平台判断
     if pf.system() == 'Windows':
         adb_path = "./platform-tools/adb.exe"
     else:
@@ -23,6 +14,11 @@ class Adb:
 
     @classmethod
     def have_device(cls) -> bool:
+        """
+        是否存在已连接设备
+
+        :return:
+        """
         return len(cls.get_device_list()) != 0
 
     @classmethod
@@ -55,6 +51,12 @@ class Adb:
 
     @classmethod
     def if_device_online(cls, serial) -> bool:
+        """
+        判断设备是否在线
+
+        :param serial:
+        :return:
+        """
         cmd = [cls.adb_path, '-s', serial, 'get-state']
         p = Popen(cmd, stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate()
@@ -63,6 +65,11 @@ class Adb:
         return stdout.strip() == b'device'
 
     def verify_device(self) -> bool:
+        """
+        验证当前设备是否与本线程设备一致
+
+        :return:
+        """
         return self.get_device_id() == self.device_id
 
     def command(self, *args):
@@ -89,31 +96,20 @@ class Adb:
         cmd.extend(args)
         return Popen(cmd, stdout=PIPE, stderr=PIPE)
 
-    def getprop(self, prop):
-        p = self.shell('getprop', prop)
+    def connect(self, ip):
+        p = self.command('connect', ip)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
             raise Exception(stderr)
-        return stdout.strip()
+        return stdout.decode("utf-8").strip()
 
-    def setprop(self, prop, value):
-        p = self.shell('setprop', prop, value)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
-        return stdout.strip()
-
-    def push(self, src, dst):
-        p = self.command('push', src, dst)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
-
-    def kill_server(self):
-        p = self.command('kill-server')
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
+    def auto_connect(self):
+        if self.have_device():
+            return
+        for ip in self.get_device_list():
+            self.connect(ip[0])
+            if self.have_device():
+                return
 
     def get_screen_size(self) -> tuple:
         p = self.shell('wm', 'size')
@@ -138,20 +134,11 @@ class Adb:
     def device_id(self):
         return self.get_device_id()
 
-    def connect(self, ip):
-        p = self.command('connect', ip)
+    def kill_server(self):
+        p = self.command('kill-server')
         stdout, stderr = p.communicate()
         if p.returncode != 0:
             raise Exception(stderr)
-        return stdout.decode("utf-8").strip()
-
-    def auto_connect(self):
-        if self.have_device():
-            return
-        for ip in self.get_device_list():
-            self.connect(ip[0])
-            if self.have_device():
-                return
 
     def __del__(self):
         self.kill_server()

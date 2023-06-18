@@ -160,8 +160,11 @@ class Ui_MainWindow(object):
         self.PauseBtn.setMinimumSize(QtCore.QSize(120, 20))
         self.PauseBtn.setObjectName("PauseBtn")
         self.horizontalLayout.addWidget(self.PauseBtn)
-        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
+        spacerItem5 = QtWidgets.QSpacerItem(30, 20, QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Minimum)
         self.horizontalLayout.addItem(spacerItem5)
+        self.VersionLabel = QtWidgets.QLabel(parent=self.centralwidget)
+        self.VersionLabel.setObjectName("VersionLabel")
+        self.horizontalLayout.addWidget(self.VersionLabel)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.PlainTextEdit = PlainTextEdit(parent=self.centralwidget)
         self.PlainTextEdit.setObjectName("PlainTextEdit")
@@ -180,4 +183,5 @@ class Ui_MainWindow(object):
         self.DisConnectBtn.setText(_translate("MainWindow", "断开连接"))
         self.StartBtn.setText(_translate("MainWindow", "开始"))
         self.PauseBtn.setText(_translate("MainWindow", "暂停"))
+        self.VersionLabel.setText(_translate("MainWindow", "当前版本"))
 from qfluentwidgets import ComboBox, PlainTextEdit, PushButton
