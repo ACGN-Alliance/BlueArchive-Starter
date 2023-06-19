@@ -9,7 +9,7 @@ from UI.newui import Ui_MainWindow
 from qfluentwidgets import PushButton
 
 
-from adb import ScriptParseThread as se
+from adb import ScriptExecutor as se
 from adb.adb_utils import Adb, is_adb_effective
 from adb.script import script
 from log import LoggerDisplay
