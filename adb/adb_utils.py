@@ -1,13 +1,43 @@
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, DEVNULL
 import platform as pf
+import os
+
+if pf.system() == 'Windows':
+    adb_exec = "adb.exe"
+else:
+    adb_exec = "adb"
+# 检查环境变量当中是否存在platform-tools
+android_env_name = [
+    "ANDROID_HOME",
+    "ANDROID_SDK_ROOT",
+    "ANDROID_SDK_HOME",
+    "ANDROID_SDK",
+    "AndroidSdkRoot",
+    "AndroidSdkHome",
+    "AndroidHome",
+    "AndroidSdk",
+]
+adb_path = None
+for name in android_env_name:
+    if os.getenv(name):
+        adb_path = os.path.join(os.getenv(name), adb_exec)
+if not adb_path:
+    adb_path = os.path.join(os.getcwd(), "platform-tools", adb_exec)
+
+def is_adb_effective() -> bool:
+    """
+    检查adb是否可用
+    :return:
+    """
+    cmd = [adb_path, 'version']
+    p = Popen(cmd, stdout=DEVNULL, stderr=DEVNULL)
+    p.communicate()
+    if p.returncode != 0:
+        return False
+    return True
+
 
 class Adb:
-    # 平台判断
-    if pf.system() == 'Windows':
-        adb_path = "./platform-tools/adb.exe"
-    else:
-        adb_path = "./platform-tools/adb"
-
     def __init__(self, serial=None):
         if serial:
             self.serial = serial
@@ -21,13 +51,27 @@ class Adb:
         """
         return len(cls.get_device_list()) != 0
 
+    def get_all_active_activity(self, serial: str = None) -> list:
+        """
+        获取所有活动的activity
+
+        :return:
+        """
+        cmd = ["dumpsys", "activity", "top", "|", "grep", "ACTIVITY"]
+        out = self.shell(cmd)
+        app_lst = []
+        for app in out.split("\n"):
+            app_lst.append(app.split()[1].split("/")[0])
+
+        return app_lst
+
     @classmethod
     def get_device_list(cls, *args, all: bool = False) -> list:
         """
         获取设备列表
         :return: tuple(序列号, 状态, 连接)
         """
-        cmd = [cls.adb_path, 'devices', '-l']
+        cmd = [adb_path, 'devices', '-l']
         p = Popen(cmd, stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
@@ -57,7 +101,7 @@ class Adb:
         :param serial:
         :return:
         """
-        cmd = [cls.adb_path, '-s', serial, 'get-state']
+        cmd = [adb_path, '-s', serial, 'get-state']
         p = Popen(cmd, stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate()
         if p.returncode != 0:
@@ -75,12 +119,12 @@ class Adb:
     def command(self, *args):
         if self.verify_device():
             raise Exception("未检测到设备")
-        cmd = [self.adb_path]
+        cmd = [adb_path]
         cmd.extend(args)
         return Popen(cmd, stdout=PIPE, stderr=PIPE)
 
     def get_command_output(self, *args):
-        cmd = [self.adb_path]
+        cmd = [adb_path]
         cmd.extend(args)
         p = Popen(cmd, stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate()
@@ -91,7 +135,7 @@ class Adb:
     def shell(self, *args):
         if self.verify_device():
             raise Exception("未检测到设备")
-        cmd = [self.adb_path]
+        cmd = [adb_path]
         cmd.extend(['shell'])
         cmd.extend(args)
         return Popen(cmd, stdout=PIPE, stderr=PIPE)
