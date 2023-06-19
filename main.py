@@ -1,6 +1,6 @@
 import time
 from typing import Optional, List
-import sys, os
+import sys
 
 from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 from PyQt6.QtCore import QThreadPool, pyqtSignal, QThread, pyqtSlot
@@ -8,8 +8,9 @@ from PyQt6.QtCore import QThreadPool, pyqtSignal, QThread, pyqtSlot
 from UI.newui import Ui_MainWindow
 from qfluentwidgets import PushButton
 
-from adb import ScriptExecutor as se
-from adb.adb_utils import Adb
+
+from adb import ScriptParseThread as se
+from adb.adb_utils import Adb, is_adb_effective
 from adb.script import script
 from log import LoggerDisplay
 
@@ -70,8 +71,8 @@ class App(QMainWindow, Ui_MainWindow):
         self.DisConnectBtn.setEnabled(False)
         self.PlainTextEdit.setReadOnly(True)
 
-        if not os.path.exists("platform-tools"):
-            QMessageBox.critical(self, "错误", "未找到adb工具,请将下载好的platform-tools文件夹放置在本程序同一目录下")
+        if not is_adb_effective():  # 检测是否有有效的adb
+            QMessageBox.critical(self, "错误", "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者添加入环境变量当中")
             sys.exit()
 
         self.btn_lst = [self.StartBtn, self.PauseBtn, self.DisConnectBtn, self.ConnectBtn]
@@ -152,6 +153,9 @@ class App(QMainWindow, Ui_MainWindow):
         只有当sp处于暂停状态时点击才是有效的
         :return:
         """
+        if "com.nexon.bluearchive" not in self.adb.get_all_active_activity():
+            pass  # TODO 连接终止
+
         if self.se is not None and self.se.PSW.PAUSED:
             self.se.Resume()
             self.btnOperation(self.btn_lst, [False, True, None, False])

@@ -12,15 +12,25 @@
 
 ## 使用
 1. 进入[Android SDK Platform-Tools](https://developer.android.google.cn/studio/releases/platform-tools?hl=zh-cn)下载对应于自己系统的最新版 platform 工具  
-2. 将下载好的压缩包解压, 将名为 `platform-tools` 的文件夹放入下载好的 `ba-starter` 可执行文件同级目录下
-3. 连接上你要操作的设备
-> 注: 如果是安卓手机需要把 设置>开发者选项>USB调试 打开, 连接上数据线后选择`传输文件`(若选择`仅充电`则需要在开发者选项当中把`仅充电下允许USB调试`打开)
+> 考虑到软件大小与许可证等因素, 提供的软件中不包含 platform-tools
+ 
+> 如果你电脑之前正确配置过AndroidSdk环境(指环境变量当中有正确的变量, 在 shell 当中执行`adb`不会找不到命令), 并且可以正常打开软件(没有错误弹窗), 
+> 即可跳过步骤1和步骤2
 
-4. 点击`扫描`获取已连接设备
-> 注: 如果是安卓手机, 执行此步时会提示需要验证RSA密钥(后面的步骤可能也会需要), 点击`允许`即可.
+2. 将下载好的压缩包解压, 将名为 `platform-tools` 的文件夹放入下载好的 `ba-starter` 可执行文件同级目录下, 或者将文件夹路径加入到环境变量当中, 命名为`ANDROID_SDK`
 
-5. 选取需要连接的设备, 点击`连接`, 提示连接成功即可
-6. 点击`开始`来开始执行脚本
+3. 双击`ba-starter`可执行文件打开软件, 若无错误弹窗则前两步成功配置, 若出现错误请检查自己的配置是否正确
+, 如果觉得不是自己的错误欢迎提交 issue
+
+4. 使用 USB 连接上你要操作的设备或者打开安卓模拟器
+> 注: 如果是实体安卓设备, 则需要把 `设置`>`开发者选项`>`USB调试` 开关打开, 连接上数据线后选择`传输文件`(若选择`仅充电`则需要在开发者选项当中把`仅充电下允许USB调试`打开)
+
+5. 点击`扫描`获取已连接设备
+> 注: 如果是安卓手机, 执行此步时会提示需要验证 RSA 密钥(后面的步骤也会需要), 点击`允许`即可.
+
+6. 选取需要连接的设备, 点击`连接`, 提示连接成功即可
+7. 打开`BlueArchive`, 进入大厅界面
+8. 点击`开始`来开始执行脚本
 
 ## 计划
 
@@ -31,4 +41,4 @@
 - [ ] box内容判断
 
 ## 参与开发
-你可以通过 fork 本仓库并提出 [pr](https://github.com/ACGN-Alliance/BlueArchive-Starter/pulls) 来贡献代码, 另外如果你觉得你有能力的话欢迎加入我们的组织 [ACGN-Alliance](https://github.com/ACGN-Alliance)
+你可以通过 fork 本仓库并提出 [pr](https://github.com/ACGN-Alliance/BlueArchive-Starter/pulls) 来贡献代码, 另外如果你觉得你有能力的话欢迎加入我们的组织 [ACGN-Alliance](https://github.com/ACGN-Alliance), 随时欢迎加入(摸鱼也行的啦)
