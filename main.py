@@ -8,7 +8,7 @@ from PyQt6.QtCore import QThreadPool, pyqtSignal, QThread, pyqtSlot
 from UI.newui import Ui_MainWindow
 from qfluentwidgets import PushButton
 
-from adb import ScriptParseThread as sp
+from adb import ScriptExecutor as se
 from adb.adb_utils import Adb
 from adb.script import script
 from log import LoggerDisplay
@@ -58,7 +58,7 @@ class App(QMainWindow, Ui_MainWindow):
         self.resize(750, 900)
 
         # variables init
-        self.sp: Optional[sp] = None
+        self.se: Optional[se] = None
         self.listener = None
         self.deviceMapping = {}  # 设备序列号映射
 
@@ -114,7 +114,7 @@ class App(QMainWindow, Ui_MainWindow):
         恢复按钮
         :return:
         """
-        if self.sp is not None and not self.sp.PSW.FINISHED:
+        if self.se is not None and not self.se.PSW.FINISHED:
             self.btnOperation(self.btn_lst, [True, False, True, False])
             self.logger.info("点击开始按钮开始执行脚本")
         else:
@@ -128,7 +128,7 @@ class App(QMainWindow, Ui_MainWindow):
         暂停按钮
         :return:
         """
-        if self.sp is not None and not self.sp.PSW.FINISHED:
+        if self.se is not None and not self.se.PSW.FINISHED:
             self.btnOperation(self.btn_lst, [False, True, None, False])
             self.logger.info("正在运行~点击暂停按钮暂停脚本")
         else:
@@ -152,8 +152,8 @@ class App(QMainWindow, Ui_MainWindow):
         只有当sp处于暂停状态时点击才是有效的
         :return:
         """
-        if self.sp is not None and self.sp.PSW.PAUSED:
-            self.sp.Resume()
+        if self.se is not None and self.se.PSW.PAUSED:
+            self.se.Resume()
             self.btnOperation(self.btn_lst, [False, True, None, False])
             self.label_2.setText("正在运行")
             self.logger.info("开始运行脚本~点击暂停按钮暂停脚本")
@@ -164,8 +164,8 @@ class App(QMainWindow, Ui_MainWindow):
         只有当sp处于运行状态时点击才是有效的
         :return:
         """
-        if self.sp is not None and not self.sp.PSW.PAUSED:
-            self.sp.Pause()
+        if self.se is not None and not self.se.PSW.PAUSED:
+            self.se.Pause()
 
             self.btnOperation(self.btn_lst, [True, False, None, False])
             self.label_2.setText("执行暂停")
@@ -177,8 +177,8 @@ class App(QMainWindow, Ui_MainWindow):
         断开连接
         :return:
         """
-        if self.sp is not None:
-            self.sp.Pause()
+        if self.se is not None:
+            self.se.Pause()
 
             self.btnOperation(self.btn_lst, [False, False, False, True])
             self.ConnectionChoiceComboBox.setEnabled(True)
@@ -283,19 +283,19 @@ class App(QMainWindow, Ui_MainWindow):
 
     def initSp(self, serial):
         # init script parser
-        self.sp = None
-        self.sp = sp(script=script, logger=self.logger, adb=self.adb, serial=serial)
+        self.se = None
+        self.se = se(script=script, logger=self.logger, adb=self.adb, serial=serial)
 
         #   connect script parser signal
-        self.sp.resumed.connect(self.spResumedHandler)
-        self.sp.paused.connect(self.spPausedHandler)
-        self.sp.done.connect(self.spFinishedHandler)
+        self.se.resumed.connect(self.spResumedHandler)
+        self.se.paused.connect(self.spPausedHandler)
+        self.se.done.connect(self.spFinishedHandler)
         # self.sp.aborted.connect(self.spAbortedHandler)
-        self.sp.started.connect(lambda: self.PauseBtn.setEnabled(True))
-        self.sp.instructionExecuted.connect(self.spInstructionExecutedHandler)
+        self.se.started.connect(lambda: self.PauseBtn.setEnabled(True))
+        self.se.instructionExecuted.connect(self.spInstructionExecutedHandler)
 
         #   start script parser
-        self.sp.start()
+        self.se.start()
 
 
 if __name__ == '__main__':
