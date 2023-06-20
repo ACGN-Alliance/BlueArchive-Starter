@@ -3,7 +3,7 @@ import re
 from typing import Optional, List, Dict
 from weakref import WeakValueDictionary
 
-from .Interruptions import StopInterruptions
+from .Interruptions import StopInterruptions, CheckFailed
 from .adb_utils import Adb
 from .script import script_dict, Script
 from log import LoggerDisplay
@@ -20,6 +20,7 @@ class ScriptExecutorPSW:
         self.PAUSED = False
         self.FINISHED = False
         self.ENABLE_INTERRUPT = True
+        self.REQUIRE_SLEEP = -1
 
 
 class ScriptExecutor(QThread):
@@ -65,6 +66,9 @@ class ScriptExecutor(QThread):
 
         self.Exception = None
 
+        self._globals = {"__builtins__": None}
+        self._locals = {"__builtins__": None}
+
     # =============== PRIVATE METHODS ===============
 
     def _parser(self, instruction: dict):
@@ -102,6 +106,8 @@ class ScriptExecutor(QThread):
         execute the current instruction
         """
         # simulate executing...
+        # TODO 换成真正的执行，函数已经写好了
+
         self.logger.info(f"正在执行:{self.IR}")
         ret = self._parser(self.IR)
         # TODO ret = -1时结束
@@ -164,6 +170,82 @@ class ScriptExecutor(QThread):
         self.resumed.emit()
         self.logger.debug("任务恢复")
 
+    def _eval(self, expr: str):
+        """
+        evaluate the expression
+        :param expr:
+        :return:
+        """
+        return eval(expr, self._globals, self._locals)
+
+    def _exec(self, stmt: str):
+        """
+        execute the statement
+        :param stmt:
+        :return:
+        """
+        exec(stmt, self._globals, self._locals)
+
+    def _instructionUniverseBlock(self):
+        # 处理block
+        if block := self.IR["block"]:
+            # 处理block中的arg子句
+            if "arg" in block:
+                for arg_stmt in block["arg"]:
+                    if arg_stmt["del"]:
+                        self._globals.pop(arg_stmt["ID"])
+                    else:
+                        self._globals[arg_stmt["ID"]] = arg_stmt["value"]
+
+            if "check" in block:
+                # 处理block中的check子句
+                for check_stmt in block["check"]:
+                    # hard | soft
+                    check_mode = check_stmt["check_mode"]
+                    if not self._eval(check_stmt["test_expr"]):
+                        if check_mode == "hard":
+                            raise CheckFailed
+                        elif check_mode == "soft":
+                            # TODO soft check 输出警告
+                            pass
+                        else:
+                            raise NotImplementedError
+
+            if "stay" in block:
+                # 处理block中的stay子句
+                for stay_stmt in block["stay"]:
+                    if not self._eval(stay_stmt["test_expr"]):
+                        # 循环执行包含该条stay的指令
+                        self.jumpTo(self.IP - 1)
+                        self.requireSleep(stay_stmt["time"])
+
+    def _adbInstruction(self):
+        cmd = self.IR["cmd"]
+        # 执行cmd形如:["shell","input","keyevent","4"],并获得一个返回值
+        popen = self.adb.command(cmd)
+        popen.wait()
+        _RET = popen.stdout.read()
+        self._locals["_RET"] = _RET
+
+        self._instructionUniverseBlock()
+
+    def _ocrInstruction(self):
+        # TODO
+        pass
+
+    def _sleepInstruction(self):
+        self.requireSleep(self.IR["time"])
+
+    def _logInstruction(self):
+        self.logger.info(f"脚本执行器-{self.ID}: {self._eval(self.IR['msg'])}")
+
+    def _exitInstruction(self):
+        raise StopInterruptions
+
+    def _clickInstruction(self):
+        # TODO
+        pass
+
     # =============== PRIVATE METHODS ===============
 
     # =============== PUBLIC METHODS ===============
@@ -185,14 +267,21 @@ class ScriptExecutor(QThread):
             except BaseException as e:
                 self.Exception = e
             finally:
-                # interrupt period
-                if not self._interruptPeriod():
-                    break
-                # leave time to receive the external events and requests
-                self.msleep(500)
-                # interrupt period
-                if not self._interruptPeriod():
-                    break
+                # if it needs a sleep
+                if self.PSW.REQUIRE_SLEEP != -1:
+                    # interrupt period
+                    if not self._interruptPeriod():
+                        break
+                    # leave time to receive the external events and requests
+                    self.msleep(int(self.PSW.REQUIRE_SLEEP * 1000))
+                    self.PSW.REQUIRE_SLEEP = -1
+                    # interrupt period
+                    if not self._interruptPeriod():
+                        break
+                else:
+                    # interrupt period
+                    if not self._interruptPeriod():
+                        break
 
         if self.IP == self.script.BeginAddress + self.script.Length:
             self.PSW.FINISHED = True
@@ -204,6 +293,9 @@ class ScriptExecutor(QThread):
             # send aborted signal
             self.logger.debug(f"停止")
             self.aborted.emit(self.ID)
+
+    def requireSleep(self, s: float):
+        self.PSW.REQUIRE_SLEEP = s
 
     def Pause(self):
         self.PSW.PAUSED = True
@@ -221,7 +313,6 @@ class ScriptExecutor(QThread):
         self.Resume()
 
     # =============== PUBLIC METHODS ===============
-
 
 
 class ScriptParseManager:
@@ -254,5 +345,3 @@ class ScriptParseManager:
         get the instance of ScriptParse by ID
         """
         return cls._instances.get(str(ID), None)
-
-

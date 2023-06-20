@@ -112,11 +112,7 @@ class ScriptParser:
         log <str>
         {"type": "log", "msg": str}
         """
-        msg = " ".join(stmt_info["raw"].split(" ")[1:])
-        if not ((msg.startswith("\"") and msg.endswith('\"')) or (msg.startswith("'") and msg.endswith("'"))):
-            raise Exception(f"语法错误:line={self.lineno}: {stmt_info['type']}:\nlog语句的参数必须用引号包裹")
-        msg = msg[1:-1]
-        return {"type": "log", "msg": msg}
+        return {"type": "log", "msg": " ".join(stmt_info["raw"].split(" ")[1:])}
 
     def _adb_parser(self, stmt_info: Dict[str, str | List]):
         parsed = {"type": "adb"}
@@ -148,26 +144,28 @@ class ScriptParser:
             "raw": "check (hard | soft) (_RET (n)eq <str> | _RET (n)in <List>)"
         }]
         """
-        parsed_block = []
-        stmt_types = []
+        parsed_block = {}
+        stmt_types = set()
         for stmt_info in block:
             stmt_type = stmt_info["type"]
-            stmt_types.append(stmt_type)
+            if stmt_type not in stmt_types:
+                parsed_block[stmt_type] = []
+            stmt_types.add(stmt_type)
             parsed = getattr(self, f"_{stmt_type}_parser")(stmt_info)
-            parsed_block.append(parsed)
+            parsed_block[stmt_type].append(parsed)
         if "check" in stmt_types and "stay" in stmt_types:
-            warnings.warn(message=f"语法警告:line={self.lineno}: {stmt_info['type']}:\ncheck和stay同时出现，stay可能被忽略")
+            warnings.warn(
+                message=f"语法警告:line={self.lineno}: {stmt_info['type']}:\ncheck和stay同时出现，stay可能被忽略")
         return parsed_block
 
     def _check_parser(self, stmt_info: Dict[str, str]):
         """
         check (hard | soft)? (_RET (n)eq <str> | _RET (n)in <List>) -> {
-            "type": "check",
             "check_mode": "hard",
             "test_expr: <python expr>,
         }
         """
-        parsed = {"type": "check"}
+        parsed = {}
         tokens = stmt_info["raw"].split(" ")[1:]
         if (token := tokens.pop(0)) in ("hard", "soft"):
             parsed["check_mode"] = token
@@ -182,13 +180,22 @@ class ScriptParser:
 
     def _stay_parser(self, stmt_info: Dict[str, str]):
         """
-        stay until (_RET (n)eq <str> | _RET (n)in <List>) -> {
-            "type": "stay",
+        stay (int|float)? until (_RET (n)eq <str> | _RET (n)in <List>) -> {
             "test_expr: <python expr>,
         }
         """
-        parsed = {"type": "stay"}
+        parsed = {}
         tokens = stmt_info["raw"].split(" ")[1:]
+
+        token = tokens.pop(0)
+
+        # 如果token是一个整数或者浮点数，那么就是stay的时间提取时间
+        if re.match(r"^\d+(\.\d+)?$", token):
+            parsed["time"] = float(token)
+        else:
+            tokens.insert(0, token)
+            parsed["time"] = 1.0
+
         if not (token := tokens.pop(0)) == "until":
             raise Exception(f"语法错误:line={self.lineno}: {stmt_info['type']}:\nexcept 'until', got {token}")
         python_expr = " ".join(tokens)
@@ -201,7 +208,7 @@ class ScriptParser:
         arg <ID> = _RET | <str> | <int> | <float>
         arg del <ID>
         """
-        parsed = {"type": "arg"}
+        parsed = {}
         tokens = stmt_info["raw"].split(" ")[1:]
         if (token := tokens.pop(0)) == "del":
             parsed["del"] = True

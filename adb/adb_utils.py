@@ -58,9 +58,11 @@ class Adb:
         :return:
         """
         cmd = ["dumpsys", "activity", "top", "|", "grep", "ACTIVITY"]
-        out = self.shell(cmd)
+        popen = self.shell(cmd)
+        popen.wait()
+        out = [line.decode("utf-8").strip() for line in popen.stdout.readlines()]
         app_lst = []
-        for app in out.split("\n"):
+        for app in out:
             app_lst.append(app.split()[1].split("/")[0])
 
         return app_lst
@@ -121,7 +123,7 @@ class Adb:
         if self.verify_device():
             raise Exception("未检测到设备")
         cmd = [adb_path]
-        cmd.extend(args)
+        cmd.extend(args[0])
         return Popen(cmd, stdout=PIPE, stderr=PIPE)
 
     def get_command_output(self, *args):
@@ -138,7 +140,7 @@ class Adb:
             raise Exception("未检测到设备")
         cmd = [adb_path]
         cmd.extend(['shell'])
-        cmd.extend(args)
+        cmd.extend(args[0])
         return Popen(cmd, stdout=PIPE, stderr=PIPE)
 
     def connect(self, ip):
