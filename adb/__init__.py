@@ -1,5 +1,6 @@
+import json
 import re
-from typing import Optional, List
+from typing import Optional, List, Dict
 from weakref import WeakValueDictionary
 
 from .Interruptions import StopInterruptions
@@ -222,118 +223,6 @@ class ScriptExecutor(QThread):
     # =============== PUBLIC METHODS ===============
 
 
-class ScriptParser:
-    EOF = "$"
-
-    def __init__(self):
-        self.lines: List[str] = []
-        self.nested = []
-        self.parsed = []
-
-    def parse(self, scriptFile: str):
-        with open(scriptFile, "r", encoding="utf-8") as f:
-            self.lines = f.readlines()
-
-        self.lines.append(self.EOF)
-        # nested
-        self._nested()
-
-    def _nested(self):
-        self.lineno = 0
-        last_stmt = None
-        while self.lineno < len(self.lines):
-            line = self.lines[self.lineno]
-
-            if line.strip() == "" or line.startswith("#"):
-                # ignore empty line and comment line
-                continue
-
-            if not line.startswith("\t"):
-                stmt_type = line.split(' ')[0]
-
-                if stmt_type in ('adb', 'ocr', 'exit', 'click', 'sleep', 'log'):
-                    last_stmt = line
-                    stmt_type = line.split(' ')[0]
-                    self.nested.append({
-                        "raw": line.strip(),
-                        "type": stmt_type,
-                        "block": [],
-                    })
-                    self.lineno += 1
-
-                else:
-                    raise Exception(f"语法错误:line={self.lineno}: {stmt_type}:\n未知的语句")
-
-            else:
-                line = line.strip("\t")
-                stmt_type = line.split(' ')[0]
-                if stmt_type in ('check', 'stay', 'arg'):
-                    self.nested[last_stmt]["block"].append({
-                        "type": stmt_type,
-                        "raw": line.strip()
-                    })
-                    self.lineno += 1
-                else:
-                    raise Exception(f"语法错误:line={self.lineno}: {stmt_type}:\n未知的子句")
-
-    def _parser(self, stmt_info: dict):
-        match stmt_info['type']:
-            case 'adb':
-                self._adb_parser(stmt_info)
-            case 'ocr':
-                self._ocr_parser(stmt_info)
-            case 'exit':
-                self._exit_parser(stmt_info)
-            case 'click':
-                self._click_parser(stmt_info)
-            case 'sleep':
-                self._sleep_parser(stmt_info)
-            case 'log':
-                self._log_parser(stmt_info)
-
-    def _block_parser(self, block: List[str]):
-        # TODO
-
-        """
-        check,stay,arg,arg del
-        """
-        for stmt in block:
-            stmt = stmt.strip()
-
-        pass
-
-    def _exit_parser(self, stmt_info: dict):
-        pass
-
-    def _click_parser(self, stmt_info: dict):
-        pass
-
-    def _sleep_parser(self, stmt_info: dict):
-        pass
-
-    def _log_parser(self, stmt_info: dict):
-        pass
-
-    def _adb_parser(self, stmt_info: dict):
-        stmt = stmt_info["raw"]
-        if stmt.endswith(":\n"):
-            stmt = stmt[:-2].strip()
-            # TODO stmt_info['block']的处理
-        elif stmt.endswith("\n"):
-            stmt = stmt[:-1].strip()
-        elif self.lineno == len(self.lines) - 2:
-            stmt = stmt.strip()
-            if stmt_info["block"]:
-                raise Exception(f"语法错误:line={self.lineno}: {stmt_info['type']}:\n语句块应为空")
-
-    def _ocr_parser(self, stmt_dict: dict):
-        """
-        ocr x:<int>,y:<int>,w:<int>,h:<int> 'path/to/image':<str>
-        提取出x,y,w,h,path
-        """
-        stmt = stmt_dict["raw"]
-        x, y, w, h, path = re.findall(r"ocr\s+(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\'(.+)\'", stmt)[0]
-
 
 class ScriptParseManager:
     """
@@ -365,3 +254,5 @@ class ScriptParseManager:
         get the instance of ScriptParse by ID
         """
         return cls._instances.get(str(ID), None)
+
+
