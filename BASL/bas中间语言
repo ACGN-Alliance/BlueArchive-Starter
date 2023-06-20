@@ -1,0 +1,88 @@
+jz Label|行号 (jmp when zero)(如果为False或者等于0)
+jnz Label|行号 (jmp when not zero)(如果为True或者不等于0)
+movg 变量名(str),变量值 (全局变量赋值)
+movl 变量名(str),变量值 (局部变量赋值)
+test 返回True/False的表达式(测试表达式),变量ID
+wait 时间(float) (等待时间)
+cmd 命令 (执行命令)
+log 字符串(str) (输出日志)
+raise 异常名(str),信息(str,可选,默认"") (抛出异常)
+warn 信息(str) (输出警告)
+stop (停止脚本)
+null (空指令)
+
+数据结构:
+指令存放在顺序结构中(List)
+所有Label存放在字典中(Dict)，Key为Label名，Value为Label所在的行数
+全局变量_globals存放在字典中(Dict)，Key为变量名，Value为变量值
+局部变量_locals存放在字典中(Dict)，Key为变量名，Value为变量值
+// *************************adb指令序列*************************
+adb 样例1:
+{
+    "block": [
+        {
+          "check_mode": "soft",
+          "test_expr": "_RET != \"0\"",
+          "type": "check"
+        },
+        {
+          "test_expr": "_RET == \"0\"",
+          "time": 0.7,
+          "type": "stay"
+        },
+        {
+          "ID": "test",
+          "del": false,
+          "type": "arg",
+          "value": "6"
+        },
+        {
+          "ID": "test2",
+          "del": true,
+          "type": "arg",
+          "value": ""
+        }
+    ],
+    "cmd": [
+    "shell",
+    "input",
+    "keyevent",
+    "4"
+    ],
+    "type": "adb"
+}
+
+adb 指令序列(通用):
+
+adb-start-(开始行号): # Label: adb-start-(开始行号) 指向这条adb开始行号行
+:cmd ["shell", "input", "keyevent", "4"] # 执行命令，并将返回值保存在_locals的_RET中
+:test block[]
+
+
+// *************************adb指令序列*************************
+
+// *************************check指令序列*************************
+// check指令序列(通用),block为当前语句的block:
+start_check:
+1:test block["test_expr"],check_test
+2:jnz end_check
+3:test block["check_mode"]=='hard',check_mode
+4:jnz hard_mode
+
+soft_mode:
+5:warn f"check failed: {block["test_expr"]}"
+
+hard_mode:
+6:raise TestFail f"check failed: {block["test_expr"]}"
+
+end_check:
+7:null
+
+// *************************check指令序列*************************
+
+// *************************stay指令序列*************************
+// stay指令序列(通用),block为当前语句的block:
+start_stay:
+1:test block["test_expr"],stay_test
+2:jnz end_stay
+3:wait block["time"]

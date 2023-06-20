@@ -1,0 +1,68 @@
+{
+  "parsed": [
+    {
+      "block": {
+        "arg": [
+          {
+            "ID": "test",
+            "del": false,
+            "value": "6"
+          },
+          {
+            "ID": "test2",
+            "del": true,
+            "value": ""
+          }
+        ],
+        "check": [
+          {
+            "check_mode": "soft",
+            "test_expr": "_RET != \"0\""
+          }
+        ],
+        "stay": [
+          {
+            "test_expr": "_RET == \"0\"",
+            "time": 0.7
+          }
+        ]
+      },
+      "cmd": [
+        "shell",
+        "input",
+        "keyevent",
+        "4"
+      ],
+      "type": "adb"
+    },
+    {
+      "msg": "test test test",
+      "type": "log"
+    },
+    {
+      "pos": [
+        720,
+        480
+      ],
+      "type": "click"
+    },
+    {
+      "block": {},
+      "path": ".test.png",
+      "pos": [
+        800,
+        640,
+        120,
+        20
+      ],
+      "type": "ocr"
+    },
+    {
+      "time": 1.1,
+      "type": "sleep"
+    },
+    {
+      "type": "exit"
+    }
+  ]
+}
