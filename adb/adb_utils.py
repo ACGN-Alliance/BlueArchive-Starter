@@ -114,7 +114,8 @@ class Adb:
 
         :return:
         """
-        return self.get_device_id() == self.device_id
+        # return self.get_device_id() == self.device_id
+        return False
 
     def command(self, *args):
         if self.verify_device():
