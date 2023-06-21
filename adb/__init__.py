@@ -10,6 +10,8 @@ from log import LoggerDisplay
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from .script_parser import CompiledExpr
+
 
 class ScriptExecutorPSW:
     """
@@ -170,13 +172,13 @@ class ScriptExecutor(QThread):
         self.resumed.emit()
         self.logger.debug("任务恢复")
 
-    def _eval(self, expr: str):
+    def _eval(self, expr: CompiledExpr):
         """
         evaluate the expression
         :param expr:
         :return:
         """
-        return eval(expr, self._globals, self._locals)
+        return eval(expr.compiled_expr, self._globals, self._locals)
 
     def _exec(self, stmt: str):
         """
