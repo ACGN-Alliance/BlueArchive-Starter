@@ -1,8 +1,10 @@
+import io
 import json
 import re
 from typing import Optional, List, Dict
 from weakref import WeakValueDictionary
 
+from ocr import compare_img
 from .Interruptions import StopInterruptions, CheckFailed
 from .adb_utils import Adb
 from .script import script_dict, Script
@@ -172,9 +174,9 @@ class ScriptExecutor(QThread):
         self.resumed.emit()
         self.logger.debug("任务恢复")
 
-    def _eval(self, expr: CompiledExpr):
+    def _evaInContext(self, expr: CompiledExpr):
         """
-        evaluate the expression
+        evaluate the expression in current context
         :param expr:
         :return:
         """
@@ -192,19 +194,19 @@ class ScriptExecutor(QThread):
         # 处理block
         if block := self.IR["block"]:
             # 处理block中的arg子句
-            if "arg" in block:
-                for arg_stmt in block["arg"]:
+            if "var" in block:
+                for arg_stmt in block["var"]:
                     if arg_stmt["del"]:
                         self._globals.pop(arg_stmt["ID"])
                     else:
-                        self._globals[arg_stmt["ID"]] = arg_stmt["value"]
+                        self._globals[arg_stmt["ID"]] = self._evaInContext(arg_stmt["value"])
 
             if "check" in block:
                 # 处理block中的check子句
                 for check_stmt in block["check"]:
                     # hard | soft
                     check_mode = check_stmt["check_mode"]
-                    if not self._eval(check_stmt["test_expr"]):
+                    if not self._evaInContext(check_stmt["test_expr"]):
                         if check_mode == "hard":
                             raise CheckFailed
                         elif check_mode == "soft":
@@ -216,10 +218,17 @@ class ScriptExecutor(QThread):
             if "stay" in block:
                 # 处理block中的stay子句
                 for stay_stmt in block["stay"]:
-                    if not self._eval(stay_stmt["test_expr"]):
+                    if not self._evaInContext(stay_stmt["test_expr"]):
                         # 循环执行包含该条stay的指令
                         self.jumpTo(self.IP - 1)
                         self.requireSleep(stay_stmt["time"])
+
+    def _varInstruction(self):
+        # 处理var
+        if self.IR["del"]:
+            self._locals.pop(self.IR["ID"])
+        else:
+            self._locals[self.IR["ID"]] = self._evaInContext(self.IR["value"])
 
     def _adbInstruction(self):
         cmd = self.IR["cmd"]
@@ -232,21 +241,30 @@ class ScriptExecutor(QThread):
         self._instructionUniverseBlock()
 
     def _ocrInstruction(self):
-        # TODO
-        pass
+        screenshot = io.BytesIO(self.adb.get_shell_output(self.serial, "screencap", "-p"))
+        x, y, w, h = self.IR["pos"]
+        confidence = self.IR["confidence"]
+        origin = self.IR["path"]
+        _RET = compare_img(x, y, w, h, origin, screenshot, confidence)
+        self._locals["_RET"] = _RET
+
+        self._instructionUniverseBlock()
 
     def _sleepInstruction(self):
         self.requireSleep(self.IR["time"])
 
     def _logInstruction(self):
-        self.logger.info(f"脚本执行器-{self.ID}: {self._eval(self.IR['msg'])}")
+        self.logger.info(f"脚本执行器-{self.ID}: {self._evaInContext(self.IR['msg'])}")
 
     def _exitInstruction(self):
         raise StopInterruptions
 
     def _clickInstruction(self):
-        # TODO
-        pass
+        x, y = self.IR["pos"]
+        self.adb.shell("-s", self.serial, "input", "tap", x, y)
+        self._locals["_RET"] = None
+
+        self._instructionUniverseBlock()
 
     # =============== PRIVATE METHODS ===============
 

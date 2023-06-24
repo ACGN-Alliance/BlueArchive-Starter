@@ -13,6 +13,7 @@ class CompiledExpr:
 
     @staticmethod
     def _compile_python_expr(expr: str, lineno: int):
+        print(f"compiling expr: {expr} at line {lineno}")
         try:
             return compile(expr, "<string>", "eval")
         except Exception as e:
@@ -39,7 +40,6 @@ class ScriptTreeJsonEncoder(json.JSONEncoder):
 
 
 class ScriptParser:
-    EOF = "$"
 
     def __init__(self):
         self.lineno = 1
@@ -51,7 +51,7 @@ class ScriptParser:
         with open(scriptFile, "r", encoding="utf-8") as f:
             self.lines = f.readlines()
 
-        self.lines.append(self.EOF)
+        self.lines.append("$")
         self.lines.insert(0, "^")
         # nested
         self._nested()
@@ -59,24 +59,24 @@ class ScriptParser:
         for p in self.nested:
             self._parser(p)
 
-        for p in self.parsed:
-            print(json.dumps(p, indent=4, sort_keys=True, ensure_ascii=False, cls=ScriptTreeJsonEncoder))
+        print(json.dumps({"parsed": self.parsed}, indent=4, sort_keys=True, ensure_ascii=False,
+                         cls=ScriptTreeJsonEncoder))
 
     def _nested(self):
         self.lineno = 1
-        last_stmt = None
         while self.lineno < len(self.lines):
-            line = self.lines[self.lineno]
+            if (line := self.lines[self.lineno]).endswith("\n"):
+                line = line[:-1]
 
-            if line.strip() == "" or line.startswith("#"):
+            if (line_s := line.strip()) == "" or line_s.startswith("#"):
                 # ignore empty line and comment line
+                self.lineno += 1
                 continue
 
             if not line.startswith('\t') and not line.startswith("    "):
                 stmt_type = line.split(' ')[0]
 
-                if stmt_type in ('adb', 'ocr', 'exit', 'click', 'sleep', 'log'):
-                    last_stmt = line
+                if stmt_type in ('adb', 'ocr', 'exit', 'click', 'sleep', 'log', 'var'):
                     stmt_type = line.split(' ')[0]
                     raw = line.strip()
                     if raw.endswith(":"):
@@ -84,7 +84,7 @@ class ScriptParser:
                     self.nested.append({
                         "raw": raw,
                         "type": stmt_type,
-                        "lineno": self.lineno,
+                        "lineno": self.lineno - 1,
                         "block": []
                     })
                     self.lineno += 1
@@ -96,7 +96,7 @@ class ScriptParser:
             else:
                 line = line.strip()
                 stmt_type = line.split(' ')[0]
-                if stmt_type in ('check', 'stay', 'arg'):
+                if stmt_type in ('check', 'stay', 'var'):
                     try:
                         self.nested[-1]["block"].append({
                             "type": stmt_type,
@@ -123,14 +123,17 @@ class ScriptParser:
                 self.parsed.append(self._sleep_parser(stmt_info))
             case 'log':
                 self.parsed.append(self._log_parser(stmt_info))
-        self.lineno += 1
+            case 'var':
+                var_parsed = self._var_parser(stmt_info)
+                var_parsed.update({"type": "var"})
+                self.parsed.append(var_parsed)
 
     def _exit_parser(self, stmt_info: Dict[str, str]):
         if stmt_info["block"]:
             raise Exception(f"语法错误:line={stmt_info['lineno']}: {stmt_info['type']}:\n不应出现语句子块")
         return {"type": "exit"}
 
-    def _click_parser(self, stmt_info: Dict[str, str]):
+    def _click_parser(self, stmt_info: Dict[str, str | List]):
         """
         click SPACE? x:int SPACE? , SPACE? y:int SPACE?
         提取x,y
@@ -140,6 +143,8 @@ class ScriptParser:
         stmt = stmt_info["raw"]
         x, y = re.findall(r"^click\s+(\d+)\s*,\s*(\d+)$", stmt)[0]
         parsed["pos"] = (int(x), int(y))
+        parsed_block = self._block_parser(stmt_info, stmt_info["block"])
+        parsed["block"] = parsed_block
         return parsed
 
     def _sleep_parser(self, stmt_info: Dict[str, str]):
@@ -167,12 +172,27 @@ class ScriptParser:
 
     def _ocr_parser(self, stmt_dict: Dict[str, str | List]):
         """
-        ocr x:<int>,y:<int>,w:<int>,h:<int> 'path/to/image':<str>
+        ocr x:<int>,y:<int>,w:<int>,h:<int>(,confidence:<float>)? 'path/to/image':<str>
         提取出x,y,w,h,path
         """
         parsed = {"type": "ocr"}
         stmt = stmt_dict["raw"]
-        x, y, w, h, path = re.findall(r"ocr\s+(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\"(.+)\"", stmt)[0]
+        try:
+            x, y, w, h, confidence, path = \
+                re.findall(r"^ocr\s+(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,?\s*([0-9.]+)?\s*[\"'](.+)[\"']$",
+                           stmt)[0]
+        except IndexError:
+            raise Exception(f"语法错误:line={stmt_dict['lineno']}: {stmt_dict['type']}:\n语法错误")
+
+        if confidence == "":
+            parsed["confidence"] = 0.9
+        elif 0 <= (c := float(confidence)) <= 1:
+            parsed["confidence"] = c
+        else:
+            parsed["confidence"] = 0.9
+            warnings.warn(
+                f"语法警告:line={stmt_dict['lineno']}: {stmt_dict['type']}:\n置信度应在0-1之间,已自动修正为默认值{parsed['confidence']}")
+
         parsed["pos"] = (int(x), int(y), int(w), int(h))
         parsed["path"] = path
         parsed_block = self._block_parser(stmt_dict, stmt_dict["block"])
@@ -181,7 +201,7 @@ class ScriptParser:
 
     def _block_parser(self, super_stmt_info, block: List[Dict[str, str]]):
         """
-        check,stay,arg,arg del
+        check,stay,var,var del
         [{
             "type": "check",
             "raw": "check (hard | soft) (_RET (n)eq <str> | _RET (n)in <List>)"
@@ -254,23 +274,23 @@ class ScriptParser:
         parsed["test_expr"] = CompiledExpr(python_expr, int(stmt_info["lineno"]))
         return parsed
 
-    def _arg_parser(self, stmt_info: Dict[str, str]):
+    def _var_parser(self, stmt_info: Dict[str, str]):
         """
-        arg <ID> = _RET | <str> | <int> | <float>
-        arg del <ID>
+        var <ID> = _RET | <str> | <int> | <float>
+        var del <ID>
         """
         parsed = {}
         tokens = stmt_info["raw"].split(" ")[1:]
         if (token := tokens.pop(0)) == "del":
             parsed["del"] = True
             parsed["ID"] = tokens.pop(0)
-            parsed["value"] = ""
+            parsed["value"] = CompiledExpr("None", int(stmt_info["lineno"]))
         else:
             parsed["del"] = False
             parsed["ID"] = token
             if (token := tokens.pop(0)) != "=":
                 raise Exception(f"语法错误:line={stmt_info['lineno']}: {stmt_info['type']}:\nexcept '=', got {token}")
-            parsed["value"] = " ".join(tokens)
+            parsed["value"] = CompiledExpr(" ".join(tokens), int(stmt_info["lineno"]))
         return parsed
 
     @staticmethod
@@ -281,3 +301,4 @@ class ScriptParser:
 if __name__ == '__main__':
     parser = ScriptParser()
     parser.parse("../BASL/test.bas")
+    print(6)
