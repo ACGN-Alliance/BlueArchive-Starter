@@ -33,6 +33,8 @@ def _compare_img(
     :param confidence: 相似度阈值
     :return: 如果相似度大于阈值，则返回True，否则返回False
     """
+    if confidence > 1 or confidence < 0:
+        raise ValueError("置信度范围为 [0, 1]")
 
     im: Image.Image = Image.open(origin_img)
     if x + width > im.width or y + height > im.height:

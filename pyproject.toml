@@ -10,7 +10,6 @@ dependencies = [
     "pyqt6==6.4.2",
     "PyQt6-tools>=6.4.2.3.3",
     "PyQt6-Fluent-Widgets>=0.9.3",
-    "python-opencv>=1.0.0.14",
     "pillow>=9.5.0",
 ]
 requires-python = ">=3.10"
