@@ -1,23 +1,23 @@
 """
 本软件包用于进行图像定位操作
 """
+from io import BytesIO
 from pathlib import Path
-from random import randint
 
 from PIL import Image, ImageChops
 
 CONFIDENCE = 0.9  # 图像相似度阈值
 
 
-def _compare_img(
+def compare_img(
         x: float,
         y: float,
         width: float,
         height: float,
-        origin_img: str | Path,
-        similar_img: str | Path,
-        *args,
+        origin_img: str | Path | BytesIO,
+        similar_img: str | Path | BytesIO,
         confidence: float = CONFIDENCE,
+        *args,
         **kwargs,
 ) -> bool:
     """

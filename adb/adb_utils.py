@@ -1,4 +1,4 @@
-from subprocess import Popen, PIPE, DEVNULL
+from subprocess import Popen, PIPE, DEVNULL, check_output
 import platform as pf
 import os
 
@@ -23,6 +23,7 @@ for name in android_env_name:
         adb_path = os.path.join(os.getenv(name), adb_exec)
 if not adb_path:
     adb_path = os.path.join(os.getcwd(), "platform-tools", adb_exec)
+
 
 def is_adb_effective() -> bool:
     """
@@ -142,6 +143,14 @@ class Adb:
         cmd.extend(['shell'])
         cmd.extend(args[0])
         return Popen(cmd, stdout=PIPE, stderr=PIPE)
+
+    @classmethod
+    def get_shell_output(cls, device_id, *args) -> bytes:
+        cmd = [adb_path]
+        cmd.extend(['-s', device_id, 'shell'])
+        cmd.extend(args)
+        output = check_output(cmd)
+        return output
 
     def connect(self, ip):
         p = self.command('connect', ip)
