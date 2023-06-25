@@ -129,12 +129,16 @@ class Adb:
 
     def get_command_output(self, *args):
         cmd = [adb_path]
-        cmd.extend(args)
-        p = Popen(cmd, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        if p.returncode != 0:
-            raise Exception(stderr)
-        return stdout.strip().decode("utf-8")
+        # p = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        # stdout, stderr = p.communicate()
+        # if p.returncode != 0:
+        #     raise Exception(stderr)
+        cmd.extend(['-s', self.device_id])
+        cmd.extend(args[0])
+        output = check_output(cmd)
+        #  return stdout.strip().decode("utf-8")
+        return output
+
 
     def shell(self, *args):
         if self.verify_device():

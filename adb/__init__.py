@@ -1,4 +1,5 @@
 import io
+import warnings
 from typing import Optional
 from weakref import WeakValueDictionary
 
@@ -11,6 +12,25 @@ from log import LoggerDisplay
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from .script_parser import CompiledExpr
+
+empty = {"__builtins__": None}
+
+
+class LoggerCarrier:
+    def __init__(self, signal: pyqtSignal):
+        self.signal = signal
+
+    def info(self, msg):
+        self.signal.emit(("info", msg))
+
+    def debug(self, msg):
+        self.signal.emit(("debug", msg))
+
+    def warning(self, msg):
+        self.signal.emit(("warning", msg))
+
+    def error(self, msg):
+        self.signal.emit(("error", msg))
 
 
 class ScriptExecutorPSW:
@@ -28,6 +48,7 @@ class ScriptExecutorPSW:
 class ScriptExecutor(QThread):
     paused = pyqtSignal()
     resumed = pyqtSignal()
+    log = pyqtSignal(tuple)
 
     # not implemented,emit ID of the sp, so that the main thread can know which sp is during interrupt period
     interrupt = pyqtSignal(int)
@@ -43,7 +64,6 @@ class ScriptExecutor(QThread):
                  scriptFile: str,
                  adb: Adb,
                  serial: str,
-                 logger: LoggerDisplay,
                  *args,
                  id_: int = 0,
                  instruction_pointer: int = -1,
@@ -63,14 +83,14 @@ class ScriptExecutor(QThread):
         # a Register that save the current state of ScriptParse,VISIBLE to the user
         self.PSW = ScriptExecutorPSW()
         # logger
-        self.logger = logger
+        self.logger = LoggerCarrier(self.log)
         # device serial
         self.serial = serial
         # adb
         self.adb = adb
 
-        self._globals = {"__builtins__": None}
-        self._locals = {"__builtins__": None}
+        self._globals = empty.copy()
+        self._locals = empty.copy()
 
     # =============== PRIVATE METHODS ===============
     def _initScript(self):
@@ -83,24 +103,6 @@ class ScriptExecutor(QThread):
 
         self.IP = max(self.script.BeginAddress, self.IP)
 
-    def _parser(self, instruction: dict):
-        """
-        脚本解析
-        :param instruction:
-        :return:
-        """
-        name = instruction.get("name", None)
-        action = instruction.get("action", None)
-        args = {k: v for k, v in instruction.items() if k not in ("name", "action")}
-
-        if action == "exit":
-            return -1
-        elif action == "adb":
-            out = self.adb.get_command_output(args["args"])
-        elif action == "ocr":
-            pass
-        else:
-            raise NotImplementedError
 
     def _fetchInstruction(self):
         """
@@ -122,11 +124,11 @@ class ScriptExecutor(QThread):
 
         self.logger.info(f"正在执行:{self.IR}")
 
-        match self.IR["type"]:
-            case "exit":
-                raise StopInterruptions
+        getattr(self, f"_{self.IR['type']}Instruction")()
 
         self.instructionExecuted.emit(self.ID)
+        # empty the local variables
+        self._locals = empty.copy()
         return True
 
     def _interruptPeriod(self):
@@ -212,8 +214,10 @@ class ScriptExecutor(QThread):
                 for arg_stmt in block["var"]:
                     if arg_stmt["del"]:
                         self._globals.pop(arg_stmt["ID"])
+                        print(f'- 变量{arg_stmt["ID"]}')
                     else:
                         self._globals[arg_stmt["ID"]] = self._evaInContext(arg_stmt["value"])
+                        print(f'+ 变量{arg_stmt["ID"]} = {self._globals[arg_stmt["ID"]]}')
 
             if "check" in block:
                 # 处理block中的check子句
@@ -222,12 +226,17 @@ class ScriptExecutor(QThread):
                     check_mode = check_stmt["check_mode"]
                     if not self._evaInContext(check_stmt["test_expr"]):
                         if check_mode == "hard":
-                            raise CheckFailed
+                            self.logger.error(f"检查失败:{str(check_stmt['test_expr'])},脚本终止")
+                            warnings.warn(f"检查失败:{str(check_stmt['test_expr'])},脚本终止")
+                            raise StopInterruptions
                         elif check_mode == "soft":
-                            # TODO soft check 输出警告
-                            pass
+                            self.logger.warning(f"检查失败:{str(check_stmt['test_expr'])}")
+                            warnings.warn(f"检查失败:{str(check_stmt['test_expr'])}")
                         else:
                             raise NotImplementedError
+                    else:
+                        self.logger.info(f"检查成功:{str(check_stmt['test_expr'])}")
+                        print(f"检查成功:{str(check_stmt['test_expr'])}")
 
             if "stay" in block:
                 # 处理block中的stay子句
@@ -235,21 +244,24 @@ class ScriptExecutor(QThread):
                     if not self._evaInContext(stay_stmt["test_expr"]):
                         # 循环执行包含该条stay的指令
                         self.jumpTo(self.IP - 1)
-                        self.requireSleep(stay_stmt["time"])
+                        self.Sleep(stay_stmt["time"])
+
+    def _EOFInstruction(self):
+        self._exitInstruction()
 
     def _varInstruction(self):
         # 处理var
         if self.IR["del"]:
-            self._locals.pop(self.IR["ID"])
+            self._globals.pop(self.IR["ID"])
+            print(f'- 变量{self.IR["ID"]}')
         else:
-            self._locals[self.IR["ID"]] = self._evaInContext(self.IR["value"])
+            self._globals[self.IR["ID"]] = self._evaInContext(self.IR["value"])
+            print(f'+ 变量{self.IR["ID"]} = {self._globals[self.IR["ID"]]}')
 
     def _adbInstruction(self):
         cmd = self.IR["cmd"]
         # 执行cmd形如:["shell","input","keyevent","4"],并获得一个返回值
-        popen = self.adb.command(cmd)
-        popen.wait()
-        _RET = popen.stdout.read()
+        _RET = self.adb.get_command_output(cmd)
         self._locals["_RET"] = _RET
 
         self._instructionUniverseBlock()
@@ -265,7 +277,7 @@ class ScriptExecutor(QThread):
         self._instructionUniverseBlock()
 
     def _sleepInstruction(self):
-        self.requireSleep(self.IR["time"])
+        self.Sleep(self.IR["time"])
 
     def _logInstruction(self):
         self.logger.info(f"脚本执行器-{self.ID}: {self._evaInContext(self.IR['msg'])}")
@@ -333,7 +345,7 @@ class ScriptExecutor(QThread):
             self.logger.debug(f"停止")
             self.aborted.emit(self.ID)
 
-    def requireSleep(self, s: float):
+    def Sleep(self, s: float):
         self.PSW.REQUIRE_SLEEP = s
 
     def Pause(self):
@@ -350,6 +362,7 @@ class ScriptExecutor(QThread):
         if instructionPointer in self.script:
             self.jumpTo(instructionPointer)
         self.Resume()
+
 
     # =============== PUBLIC METHODS ===============
 
