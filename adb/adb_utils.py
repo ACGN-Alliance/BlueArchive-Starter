@@ -124,7 +124,7 @@ class Adb:
         if self.verify_device():
             raise Exception("未检测到设备")
         cmd = [adb_path]
-        cmd.extend(args[0])
+        cmd.extend(args)
         return Popen(cmd, stdout=PIPE, stderr=PIPE)
 
     def get_command_output(self, *args):

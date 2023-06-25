@@ -20,10 +20,10 @@ from PyQt6.QtCore import (
 from UI.newui import Ui_MainWindow
 from adb import ScriptExecutor as se
 from adb.adb_utils import Adb, is_adb_effective
-from adb.script import script, Script
 from log import LoggerDisplay
 
 __version__ = "inner dev"
+
 
 class ConnectListener(QThread):
     """
@@ -71,7 +71,7 @@ class App(QMainWindow, Ui_MainWindow):
         self.se: Optional[se] = None
         self.listener = None
         self.deviceMapping = {}  # 设备序列号映射
-        self.extraScript: str = ""  # 额外脚本
+        self.scriptFile: str = ""  # 额外脚本
 
         # widget init
         self.ConnectionChoiceComboBox.setCurrentText("请点击扫描获取设备列表")
@@ -82,7 +82,8 @@ class App(QMainWindow, Ui_MainWindow):
         self.PlainTextEdit.setReadOnly(True)
 
         if not is_adb_effective():  # 检测是否有有效的adb
-            QMessageBox.critical(self, "错误", "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者添加入环境变量当中")
+            QMessageBox.critical(self, "错误",
+                                 "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者添加入环境变量当中")
             sys.exit()
 
         self.btn_lst = [self.StartBtn, self.PauseBtn, self.DisConnectBtn, self.ConnectBtn]
@@ -206,6 +207,7 @@ class App(QMainWindow, Ui_MainWindow):
         扫描设备
         :return:
         """
+
         def device_info(device_: tuple):
             mode = device_[2].split(":")[0]
             name = device_[3].split(":")[1]
@@ -239,10 +241,12 @@ class App(QMainWindow, Ui_MainWindow):
         fp = QFileDialog.getOpenFileName(self, "选择要导入的脚本", QUrl("./").path(), "脚本文件 (*.bas)")
         if fp:
             file_url = fp[0]
-            self.logger.info(f"已导入脚本: {file_url}")
-            self.label.setText(f"当前脚本:{file_url}")
-            with open(file_url, "r", encoding="utf-8") as f:
-                self.extraScript = f.read()
+            if file_url:
+                self.logger.info(f"已导入脚本: {file_url}")
+                self.label.setText(f"当前脚本:{file_url}")
+                self.scriptFile = file_url
+            else:
+                self.logger.info("导入脚本操作已取消~")
 
     @pyqtSlot()
     def spFinishedHandler(self):
@@ -309,10 +313,10 @@ class App(QMainWindow, Ui_MainWindow):
     def initSp(self, serial):
         # init script parser
         self.se = None
-        if self.extraScript:
-            self.se = se(script=Script(self.extraScript), logger=self.logger, adb=self.adb, serial=serial)
+        if self.scriptFile:
+            self.se = se(scriptFile=self.scriptFile, logger=self.logger, adb=self.adb, serial=serial)
         else:
-            self.se = se(script=script, logger=self.logger, adb=self.adb, serial=serial)
+            self.se = se(scriptFile="", logger=self.logger, adb=self.adb, serial=serial)
 
         #   connect script parser signal
         self.se.resumed.connect(self.spResumedHandler)

@@ -1,11 +1,9 @@
 import io
-import json
-import re
-from typing import Optional, List, Dict
+from typing import Optional
 from weakref import WeakValueDictionary
 
 from ocr import compare_img
-from .Interruptions import StopInterruptions, CheckFailed
+from .Interruptions import *
 from .adb_utils import Adb
 from .script import script_dict, Script
 from log import LoggerDisplay
@@ -42,7 +40,7 @@ class ScriptExecutor(QThread):
         return self.adb.device_id == self.serial
 
     def __init__(self,
-                 script: Script,
+                 scriptFile: str,
                  adb: Adb,
                  serial: str,
                  logger: LoggerDisplay,
@@ -51,14 +49,17 @@ class ScriptExecutor(QThread):
                  instruction_pointer: int = -1,
                  ):
         super().__init__()
+
         # thread ID
         self.ID = id_
+        # record the exception that cause the thread to stop
+        self.interruption = None
+        # script file path
+        self.scriptFile = scriptFile
         # a pointer that point to the next instruction, VISIBLE to the user
-        self.IP = max(script.BeginAddress, instruction_pointer)
+        self.IP = instruction_pointer
         # a Register that save the current instruction, INVISIBLE to the user
         self.IR = None
-        # a Register that save the current script
-        self.script = script
         # a Register that save the current state of ScriptParse,VISIBLE to the user
         self.PSW = ScriptExecutorPSW()
         # logger
@@ -68,12 +69,19 @@ class ScriptExecutor(QThread):
         # adb
         self.adb = adb
 
-        self.Exception = None
-
         self._globals = {"__builtins__": None}
         self._locals = {"__builtins__": None}
 
     # =============== PRIVATE METHODS ===============
+    def _initScript(self):
+        self.exception = None
+
+        try:
+            self.script = Script(self.scriptFile)
+        except Exception as e:
+            raise ParsedScriptFailed(e.args[0])
+
+        self.IP = max(self.script.BeginAddress, self.IP)
 
     def _parser(self, instruction: dict):
         """
@@ -113,8 +121,11 @@ class ScriptExecutor(QThread):
         # TODO 换成真正的执行，函数已经写好了
 
         self.logger.info(f"正在执行:{self.IR}")
-        ret = self._parser(self.IR)
-        # TODO ret = -1时结束
+
+        match self.IR["type"]:
+            case "exit":
+                raise StopInterruptions
+
         self.instructionExecuted.emit(self.ID)
         return True
 
@@ -146,13 +157,16 @@ class ScriptExecutor(QThread):
         # process interrupt operations that can not be ignored
         # check state
         if not self.device_on():
-            self.Exception = StopInterruptions()
+            self.interruption = StopInterruptions()
 
         self.interrupt.emit(self.ID)
 
         # process exceptions,
-        match self.Exception:
+        match self.interruption:
             case StopInterruptions():
+                return False
+            case ParsedScriptFailed():
+                self.logger.error(self.interruption.args)
                 return False
 
         return True
@@ -273,10 +287,15 @@ class ScriptExecutor(QThread):
     def run(self):
 
         self.Pause()
+        self._interruptPeriod()
+
         try:
+            self._initScript()
+            self.logger.info(f"脚本执行器-{self.ID}: 脚本解析完成")
+        except BaseException as e:
+            self.interruption = e
+        finally:
             self._interruptPeriod()
-        except StopInterruptions:
-            return
 
         # main
         while True:
@@ -285,7 +304,7 @@ class ScriptExecutor(QThread):
                 self._fetchInstruction()
                 self._executeInstruction()
             except BaseException as e:
-                self.Exception = e
+                self.interruption = e
             finally:
                 # if it needs a sleep
                 if self.PSW.REQUIRE_SLEEP != -1:
