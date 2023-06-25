@@ -1,1 +1,1 @@
-from _ocr import *
+from ._ocr import *

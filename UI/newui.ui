@@ -143,6 +143,20 @@ ComboBoxMenu&gt;MenuActionListWidget::item:selected:active {
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_2">
       <item>
+       <widget class="PushButton" name="BtnImport">
+        <property name="text">
+         <string>导入脚本</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>当前脚本:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer_7">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>

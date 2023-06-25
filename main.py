@@ -1,17 +1,26 @@
 import time
 from typing import Optional, List
 import sys
-
-from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
-from PyQt6.QtCore import QThreadPool, pyqtSignal, QThread, pyqtSlot
-
-from UI.newui import Ui_MainWindow
 from qfluentwidgets import PushButton
 
+from PyQt6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QMessageBox,
+    QFileDialog
+)
+from PyQt6.QtCore import (
+    QThreadPool,
+    pyqtSignal,
+    QThread,
+    pyqtSlot,
+    QUrl
+)
 
+from UI.newui import Ui_MainWindow
 from adb import ScriptExecutor as se
 from adb.adb_utils import Adb, is_adb_effective
-from adb.script import script
+from adb.script import script, Script
 from log import LoggerDisplay
 
 __version__ = "inner dev"
@@ -62,6 +71,7 @@ class App(QMainWindow, Ui_MainWindow):
         self.se: Optional[se] = None
         self.listener = None
         self.deviceMapping = {}  # 设备序列号映射
+        self.extraScript: str = ""  # 额外脚本
 
         # widget init
         self.ConnectionChoiceComboBox.setCurrentText("请点击扫描获取设备列表")
@@ -87,6 +97,7 @@ class App(QMainWindow, Ui_MainWindow):
         self.PauseBtn.clicked.connect(self.pauseBtnClickedHandler)
         self.DisConnectBtn.clicked.connect(self.disconnectBtnClickedHandler)
         self.ScanBtn.clicked.connect(self.scanBtnClickedHandler)
+        self.BtnImport.clicked.connect(self.importBtnClickedHandler)
 
     def btnOperation(self, btn_list: List[PushButton], switch: List[bool | None] | bool):
         """
@@ -224,6 +235,16 @@ class App(QMainWindow, Ui_MainWindow):
         self.ScanBtn.setEnabled(True)
 
     @pyqtSlot()
+    def importBtnClickedHandler(self):
+        fp = QFileDialog.getOpenFileName(self, "选择要导入的脚本", QUrl("./").path(), "脚本文件 (*.bas)")
+        if fp:
+            file_url = fp[0]
+            self.logger.info(f"已导入脚本: {file_url}")
+            self.label.setText(f"当前脚本:{file_url}")
+            with open(file_url, "r", encoding="utf-8") as f:
+                self.extraScript = f.read()
+
+    @pyqtSlot()
     def spFinishedHandler(self):
         self.StartBtn.setEnabled(True)  # 结束运行后可以重新开始
         self.PauseBtn.setEnabled(False)
@@ -288,7 +309,10 @@ class App(QMainWindow, Ui_MainWindow):
     def initSp(self, serial):
         # init script parser
         self.se = None
-        self.se = se(script=script, logger=self.logger, adb=self.adb, serial=serial)
+        if self.extraScript:
+            self.se = se(script=Script(self.extraScript), logger=self.logger, adb=self.adb, serial=serial)
+        else:
+            self.se = se(script=script, logger=self.logger, adb=self.adb, serial=serial)
 
         #   connect script parser signal
         self.se.resumed.connect(self.spResumedHandler)
