@@ -3,9 +3,8 @@ from adb.script_parser import ScriptParser
 
 class Script:
 
-    def __init__(self, file):
-
-        parser = ScriptParser()
+    def __init__(self, file, interval=-1):
+        parser = ScriptParser(interval)
         self.script = parser.parse(file)
 
         # calculate the length of script,and the lowest instruction pointer
@@ -63,4 +62,3 @@ script_dict = {
         "action": "exit"
     }
 }
-

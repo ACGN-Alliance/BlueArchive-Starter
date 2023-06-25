@@ -149,6 +149,16 @@ class App(QMainWindow, Ui_MainWindow):
             self.ConnectionChoiceComboBox.setEnabled(True)
             self.logger.warning("连接失效~请重新连接")
 
+    @pyqtSlot(tuple)
+    def seLogHandler(self, log: tuple):
+        """
+        脚本执行日志
+        :param log:
+        :return:
+        """
+        level, msg = log
+        getattr(self.logger, level)(msg)
+
     @pyqtSlot()
     def listenerDisconnectedHandler(self):
         """
@@ -314,9 +324,9 @@ class App(QMainWindow, Ui_MainWindow):
         # init script parser
         self.se = None
         if self.scriptFile:
-            self.se = se(scriptFile=self.scriptFile, logger=self.logger, adb=self.adb, serial=serial)
+            self.se = se(scriptFile=self.scriptFile, adb=self.adb, serial=serial)
         else:
-            self.se = se(scriptFile="", logger=self.logger, adb=self.adb, serial=serial)
+            self.se = se(scriptFile="", adb=self.adb, serial=serial)
 
         #   connect script parser signal
         self.se.resumed.connect(self.spResumedHandler)
@@ -325,6 +335,7 @@ class App(QMainWindow, Ui_MainWindow):
         # self.sp.aborted.connect(self.spAbortedHandler)
         self.se.started.connect(lambda: self.PauseBtn.setEnabled(True))
         self.se.instructionExecuted.connect(self.spInstructionExecutedHandler)
+        self.se.log.connect(self.seLogHandler)
 
         #   start script parser
         self.se.start()

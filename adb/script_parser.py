@@ -1,8 +1,9 @@
 import json
-import os
 import re
 import warnings
 from typing import List, Dict
+
+EOF = "$"
 
 
 class CompiledExpr:
@@ -21,7 +22,7 @@ class CompiledExpr:
             raise Exception(f"语法错误:line={lineno}: 表达式编译错误:{expr}\n{e}")
 
     def __str__(self):
-        return f"<CompiledExpr: expr={self.expr} , lineno={self.lineno}>"
+        return f"<CompiledExpr: expr: \" {self.expr} \", lineno={self.lineno}>"
 
     def __repr__(self):
         return self.__str__()
@@ -42,26 +43,36 @@ class ScriptTreeJsonEncoder(json.JSONEncoder):
 
 class ScriptParser:
 
-    def __init__(self):
+    def __init__(self, instructionInterval=-1):
         self.lineno = 1
         self.lines: List[str] = []
         self.nested = []
         self.parsed = []
+        self.instructionInterval = instructionInterval
 
     def parse(self, scriptFile: str):
         with open(scriptFile, "r", encoding="utf-8") as f:
             self.lines = f.readlines()
 
-        self.lines.append("$")
+        self.lines.append(EOF)
         self.lines.insert(0, "^")
         # nested
         self._nested()
 
         for p in self.nested:
             self._parser(p)
+            if self.instructionInterval > 0:
+                self.parsed.append({
+                    "type": "sleep",
+                    "time": self.instructionInterval
+                })
 
-        print(json.dumps({"parsed": self.parsed}, indent=4, sort_keys=True, ensure_ascii=False,
-                         cls=ScriptTreeJsonEncoder))
+        self.parsed.append({
+            "type": "EOF",
+        })
+
+        # print(json.dumps({"parsed": self.parsed}, indent=4, sort_keys=True, ensure_ascii=False,
+        #                  cls=ScriptTreeJsonEncoder))
         return self.parsed
 
     def _nested(self):
@@ -89,6 +100,7 @@ class ScriptParser:
                         "lineno": self.lineno - 1,
                         "block": []
                     })
+
                     self.lineno += 1
                 elif line == "$":
                     break
@@ -305,6 +317,6 @@ class ScriptParser:
 
 
 if __name__ == '__main__':
-    parser = ScriptParser()
+    parser = ScriptParser(1)
     parser.parse("../BASL/test.bas")
     print(6)

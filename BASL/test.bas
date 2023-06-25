@@ -9,8 +9,9 @@ log "test test test"
 var test3 = "test"
 var del test3
 
-var loop = 3
+var loop = 5
 adb shell input keyevent 4:
+    check soft 1 eq 1
     stay until loop eq 0
     var loop = loop - 1
 
@@ -18,8 +19,8 @@ click 720,480:
     stay until _RET eq "0"
     var test = 6
     var del test2
-ocr 800,640,120,20,0.9 ".test.png"
-    stay until
+#ocr 800,640,120,20,0.9 ".test.png"
+#    stay until
 sleep 1.1
 exit
 
