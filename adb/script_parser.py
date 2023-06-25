@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import warnings
 from typing import List, Dict
@@ -61,6 +62,7 @@ class ScriptParser:
 
         print(json.dumps({"parsed": self.parsed}, indent=4, sort_keys=True, ensure_ascii=False,
                          cls=ScriptTreeJsonEncoder))
+        return self.parsed
 
     def _nested(self):
         self.lineno = 1
@@ -296,6 +298,10 @@ class ScriptParser:
     @staticmethod
     def _is_ID(token: str):
         return re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", token) is not None
+
+    @property
+    def parsedScript(self):
+        return self.parsed
 
 
 if __name__ == '__main__':

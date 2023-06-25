@@ -1,25 +1,19 @@
+from adb.script_parser import ScriptParser
+
+
 class Script:
 
-    @staticmethod
-    def checkJson(_json):
-        """
-        check if the json is valid:whether key is always int
-        """
-        return all([isinstance(key, int) for key in _json.keys()])
+    def __init__(self, file):
 
-    def __init__(self, _json=None):
-        # check script json is valid
-        if self.checkJson(_json):
-            self.script = _json
-        else:
-            raise Exception("Invalid script")
+        parser = ScriptParser()
+        self.script = parser.parse(file)
 
         # calculate the length of script,and the lowest instruction pointer
         self._length = len(self.script)
-        self._beginAddress = min(self.script.keys())
+        self._beginAddress = 0
 
     def __getitem__(self, key):
-        return self.script.get(key, None)
+        return self.script[key]
 
     def __contains__(self, key):
         return key in self.script
@@ -70,4 +64,3 @@ script_dict = {
     }
 }
 
-script = Script(script_dict)
