@@ -50,11 +50,14 @@ def compare_img(
     # 如果有超过阈值的像素点，则认为两张图不相似
     colors = compare.getcolors(maxcolors=16384)
     all_count = len(im.getdata())
+
     white_count = 0
     for color in colors:
         if color[1] == (0, 0, 0):
-            white_count += 1
+            white_count += color[0]
+            break
     now_confidence = white_count / all_count
+
     if now_confidence > CONFIDENCE:
         return True
     else:

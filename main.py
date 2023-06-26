@@ -1,6 +1,6 @@
 import time
 from typing import Optional, List
-import sys
+import sys, os
 from qfluentwidgets import PushButton
 
 from PyQt6.QtWidgets import (
@@ -82,11 +82,14 @@ class App(QMainWindow, Ui_MainWindow):
         self.PlainTextEdit.setReadOnly(True)
 
         if not is_adb_effective():  # 检测是否有有效的adb
-            QMessageBox.critical(self, "错误",
-                                 "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者添加入环境变量当中")
+            QMessageBox.critical(self,
+                                 "错误",
+                                 "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者添加入环境变量当中"
+                                 )
             sys.exit()
 
         self.btn_lst = [self.StartBtn, self.PauseBtn, self.DisConnectBtn, self.ConnectBtn]
+        self.scriptFile = os.path.join(os.path.curdir, "BASL", "default_script.bas")  # 默认脚本路径
 
         self.logger = LoggerDisplay(self.PlainTextEdit, debug=True)  # 创建日志显示器
         self.logger.reset()
@@ -166,6 +169,7 @@ class App(QMainWindow, Ui_MainWindow):
         :return:
         """
         self.btnOperation(self.btn_lst, [False, False, False, True])
+        self.ScanBtn.setEnabled(True)
         self.ConnectionChoiceComboBox.setEnabled(True)
         self.logger.error("连接异常断开~请重新连接")
 
@@ -252,8 +256,9 @@ class App(QMainWindow, Ui_MainWindow):
         if fp:
             file_url = fp[0]
             if file_url:
+                file_name = file_url.split("/")[-1]
                 self.logger.info(f"已导入脚本: {file_url}")
-                self.label.setText(f"当前脚本:{file_url}")
+                self.label.setText(f"当前脚本:{file_name}")
                 self.scriptFile = file_url
             else:
                 self.logger.info("导入脚本操作已取消~")
@@ -309,6 +314,8 @@ class App(QMainWindow, Ui_MainWindow):
         self.adb = Adb(serial=serial)
 
         self.logger.info(f"连接成功~选择的模式是{mode}, 设备ID为: {serial}")
+        self.logger.info(f"连接成功~选择的模式是{mode}, 设备ID为: {serial}")
+        self.ScanBtn.setEnabled(False)
         # init script parser
         self.initSp(serial)
 
