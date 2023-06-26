@@ -166,6 +166,7 @@ class App(QMainWindow, Ui_MainWindow):
         :return:
         """
         self.btnOperation(self.btn_lst, [False, False, False, True])
+        self.ScanBtn.setEnabled(True)
         self.ConnectionChoiceComboBox.setEnabled(True)
         self.logger.error("连接异常断开~请重新连接")
 
@@ -252,8 +253,9 @@ class App(QMainWindow, Ui_MainWindow):
         if fp:
             file_url = fp[0]
             if file_url:
+                file_name = file_url.split("/")[-1]
                 self.logger.info(f"已导入脚本: {file_url}")
-                self.label.setText(f"当前脚本:{file_url}")
+                self.label.setText(f"当前脚本:{file_name}")
                 self.scriptFile = file_url
             else:
                 self.logger.info("导入脚本操作已取消~")
@@ -309,6 +311,8 @@ class App(QMainWindow, Ui_MainWindow):
         self.adb = Adb(serial=serial)
 
         self.logger.info(f"连接成功~选择的模式是{mode}, 设备ID为: {serial}")
+        self.logger.info(f"连接成功~选择的模式是{mode}, 设备ID为: {serial}")
+        self.ScanBtn.setEnabled(False)
         # init script parser
         self.initSp(serial)
 
