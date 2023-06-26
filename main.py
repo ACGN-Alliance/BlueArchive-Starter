@@ -1,6 +1,6 @@
 import time
 from typing import Optional, List
-import sys
+import sys, os
 from qfluentwidgets import PushButton
 
 from PyQt6.QtWidgets import (
@@ -82,11 +82,14 @@ class App(QMainWindow, Ui_MainWindow):
         self.PlainTextEdit.setReadOnly(True)
 
         if not is_adb_effective():  # 检测是否有有效的adb
-            QMessageBox.critical(self, "错误",
-                                 "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者添加入环境变量当中")
+            QMessageBox.critical(self,
+                                 "错误",
+                                 "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者添加入环境变量当中"
+                                 )
             sys.exit()
 
         self.btn_lst = [self.StartBtn, self.PauseBtn, self.DisConnectBtn, self.ConnectBtn]
+        self.scriptFile = os.path.join(os.path.curdir, "BASL", "default_script.bas")  # 默认脚本路径
 
         self.logger = LoggerDisplay(self.PlainTextEdit, debug=True)  # 创建日志显示器
         self.logger.reset()
