@@ -20,7 +20,7 @@ android_env_name = [
 adb_path = None
 for name in android_env_name:
     if os.getenv(name):
-        adb_path = os.path.join(os.getenv(name), adb_exec)
+        adb_path = os.path.join(os.getenv(name), "platform-tools", adb_exec)
 if not adb_path:
     adb_path = os.path.join(os.getcwd(), "platform-tools", adb_exec)
 

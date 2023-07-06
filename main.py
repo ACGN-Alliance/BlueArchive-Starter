@@ -84,7 +84,7 @@ class App(QMainWindow, Ui_MainWindow):
         if not is_adb_effective():  # 检测是否有有效的adb
             QMessageBox.critical(self,
                                  "错误",
-                                 "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者添加入环境变量当中"
+                                 "adb不可用, 请将下载好的platform-tools文件夹放置在本程序同一目录下或者将AndroidSDK加入环境变量当中"
                                  )
             sys.exit()
 
