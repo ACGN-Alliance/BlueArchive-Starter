@@ -1,3 +1,5 @@
+![img](https://socialify.git.ci/ACGN-Alliance/BlueArchive-Starter/image?description=1&font=Jost&forks=1&issues=1&language=1&logo=https%3A%2F%2Fcdnimg.gamekee.com%2Fimages%2Fwww%2F1596521281115_38919084.png&name=1&owner=1&pattern=Floating%20Cogs&pulls=1&stargazers=1&theme=Light)
+
 # BlueArchive-Starter
 众所周知, 碧蓝档案国际服初始号封号现象特别严重, 因此要想有个好一点的box必须在建号的时候不停的重置帐号来刷取.
 看了下网上并没有特别好用的初始号刷号工具, 基本都是使用宏脚本配合一些屏幕操作软件做的, 或者使用模拟器自带的操作记录, 
@@ -35,6 +37,11 @@
 
 > 8.5 软件默认使用内置的脚本, 若要使用自己的脚本请点击`导入文件`, 脚本编写等内容参见[文档]()
 
+## 注意事项
+- 确保网络通畅, 中途尽量不要出现连接失败的状况
+- 请关闭手机休眠
+- 游戏设置中的`Quality`调整为`high`
+
 ## 计划
 
 - [ ] 软件打包可执行文件
@@ -43,6 +50,7 @@
 - [x] 外部脚本导入
 - [ ] box内容判断
 - [ ] 断点续运&异常中断
+- [ ] 坐标位置换算(2340*1080=>?\*?)
 
 ## 参与开发
 你可以通过 fork 本仓库并提出 [pr](https://github.com/ACGN-Alliance/BlueArchive-Starter/pulls) 来贡献代码, 另外如果你觉得你有能力的话欢迎加入我们的组织 [ACGN-Alliance](https://github.com/ACGN-Alliance), 随时欢迎加入(摸鱼也行的啦)
