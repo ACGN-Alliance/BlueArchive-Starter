@@ -1,5 +1,9 @@
 ![img](https://socialify.git.ci/ACGN-Alliance/BlueArchive-Starter/image?description=1&font=Jost&forks=1&issues=1&language=1&logo=https%3A%2F%2Fcdnimg.gamekee.com%2Fimages%2Fwww%2F1596521281115_38919084.png&name=1&owner=1&pattern=Floating%20Cogs&pulls=1&stargazers=1&theme=Light)
 
+# 重要!!!
+本仓库已迁移至[BlueArchive-Starter-cli](https://github.com/ACGN-Alliance/BlueArchive-Starter-cli), 后续更新请在此查看.  
+新项目放弃QT界面使用命令行进行操作, 并大幅优化代码, 删除脚本解释器而直接使用内置脚本, 目前已经可以直接使用
+
 # BlueArchive-Starter
 众所周知, 碧蓝档案国际服初始号封号现象特别严重, 因此要想有个好一点的box必须在建号的时候不停的重置帐号来刷取.
 看了下网上并没有特别好用的初始号刷号工具, 基本都是使用宏脚本配合一些屏幕操作软件做的, 或者使用模拟器自带的操作记录, 
